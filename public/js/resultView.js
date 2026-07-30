@@ -1,5 +1,5 @@
 /**
- * AI Builder v1.0 — 結果画面（保存・品質診断・AI評価）
+ * AI Builder v2.0 — 結果画面（保存・品質診断・AI評価）
  */
 
 import { getCategory } from "../categories.js";
@@ -15,6 +15,10 @@ import {
 import { state } from "./state.js";
 import { DOM, showView, showToast, copyToClipboard, showGenerating, esc } from "./ui.js";
 import { startCategory } from "./questionView.js";
+import { withTimeout } from "./asyncUtils.js";
+
+const LOG = "[resultView]";
+const GENERATION_TIMEOUT_MS = 30000;
 
 let onGoHome = () => {};
 let currentSavedId = null;
@@ -25,16 +29,47 @@ export function initResultView(handlers) {
 
 /** 回答から結果を生成 */
 export async function showGeneratedResult() {
+  console.log(`${LOG} showGeneratedResult: start`);
   showView("result");
   showGenerating(true);
 
-  // 生成アニメーション（UX: 品質計算の体感）
+  try {
+    await withTimeout(runGeneration(), GENERATION_TIMEOUT_MS, "プロンプト生成");
+    console.log(`${LOG} showGeneratedResult: complete`);
+  } catch (err) {
+    console.error(`${LOG} showGeneratedResult: failed`, err);
+    const message =
+      err instanceof Error ? err.message : "プロンプト生成に失敗しました。もう一度お試しください。";
+    showToast(message);
+    onGoHome();
+  } finally {
+    showGenerating(false);
+    console.log(`${LOG} showGeneratedResult: loading dismissed`);
+  }
+}
+
+async function runGeneration() {
+  console.log(`${LOG} step 1/6: animation delay`);
   await delay(800);
 
+  console.log(`${LOG} step 2/6: build prompt`, { categoryId: state.categoryId, answers: state.answers });
+
   const category = getCategory(state.categoryId);
+  if (!category) {
+    throw new Error("カテゴリが見つかりません。最初からやり直してください。");
+  }
+
   const quality = evaluatePrompt(state.categoryId, state.answers);
+  console.log(`${LOG} step 3/6: quality evaluated`, { score: quality?.score, grade: quality?.grade });
+
   const prompt = buildPrompt(state.categoryId, state.answers);
+  if (!prompt || !prompt.trim()) {
+    throw new Error("プロンプトの生成に失敗しました。");
+  }
+  console.log(`${LOG} step 4/6: prompt built`, { length: prompt.length });
+
   const title = generateTitle(category.label, state.answers);
+  console.log(`${LOG} step 5/6: saving AI`, { title });
 
   const saved = await saveAI({
     title,
@@ -45,12 +80,13 @@ export async function showGeneratedResult() {
     quality,
   });
 
+  console.log(`${LOG} step 6/6: saved`, { id: saved.id });
+
   currentSavedId = saved.id;
   state.savedPromptId = saved.id;
   addRecentAI(saved.id);
 
   renderResult(saved);
-  showGenerating(false);
 }
 
 /** 共通テンプレートから結果画面を開く */

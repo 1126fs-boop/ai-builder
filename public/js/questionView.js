@@ -211,10 +211,10 @@ function updateNavButtons(question) {
   DOM.btnNextLabel.textContent = isLast ? "プロンプトを生成" : "次へ";
 }
 
-export function goNext() {
+export async function goNext() {
   const total = getQuestions(state.categoryId).length;
   if (state.questionIndex >= total - 1) {
-    onComplete();
+    await onComplete();
   } else {
     state.questionIndex++;
     state.customDraft = null;

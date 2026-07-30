@@ -25,6 +25,7 @@ const PRECACHE = [
   "/js/state.js",
   "/js/ui.js",
   "/js/storage.js",
+  "/js/asyncUtils.js",
   "/js/supabaseClient.js",
   "/js/authBar.js",
   "/js/templates.js",

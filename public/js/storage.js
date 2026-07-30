@@ -3,6 +3,10 @@
  */
 
 import { getSupabase, isCloudEnabled, getCurrentUser } from "./supabaseClient.js";
+import { withTimeout } from "./asyncUtils.js";
+
+const LOG = "[storage]";
+const CLOUD_TIMEOUT_MS = 12000;
 
 const KEYS = {
   SAVED: "aibuilder_v1_saved",
@@ -205,36 +209,60 @@ export async function saveAI(data) {
   };
 
   if (_cloud) {
-    const sb = await getSupabase();
-    const user = await getCurrentUser();
-    if (sb && user) {
-      const { data: row, error } = await sb
-        .from("saved_ais")
-        .insert({
-          user_id: user.id,
-          title: item.title,
-          category: item.category,
-          category_label: item.categoryLabel,
-          prompt: item.prompt,
-          answers: item.answers,
-          quality: item.quality,
-          version: item.version,
-        })
-        .select()
-        .single();
+    try {
+      console.log(`${LOG} saveAI: cloud save start`, { title: item.title, category: item.category });
 
-      if (!error && row) {
-        const saved = rowToItem(row);
-        _cache.unshift(saved);
-        return saved;
+      const sb = await withTimeout(getSupabase(), CLOUD_TIMEOUT_MS, "Supabase 接続");
+      const user = await withTimeout(getCurrentUser(), CLOUD_TIMEOUT_MS, "ユーザー認証");
+
+      if (sb && user) {
+        console.log(`${LOG} saveAI: sending insert request`, { userId: user.id });
+
+        const { data: row, error } = await withTimeout(
+          sb
+            .from("saved_ais")
+            .insert({
+              user_id: user.id,
+              title: item.title,
+              category: item.category,
+              category_label: item.categoryLabel,
+              prompt: item.prompt,
+              answers: item.answers,
+              quality: item.quality,
+              version: item.version,
+            })
+            .select()
+            .single(),
+          CLOUD_TIMEOUT_MS,
+          "saved_ais 保存"
+        );
+
+        if (error) {
+          console.error(`${LOG} saveAI: insert error`, error);
+          throw error;
+        }
+
+        if (row) {
+          const saved = rowToItem(row);
+          _cache.unshift(saved);
+          console.log(`${LOG} saveAI: cloud save success`, { id: saved.id });
+          return saved;
+        }
+      } else {
+        console.warn(`${LOG} saveAI: Supabase client or user unavailable, using local fallback`);
       }
+    } catch (err) {
+      console.error(`${LOG} saveAI: cloud save failed, using local fallback`, err);
     }
   }
 
-  item.id = generateId();
   _cache.unshift(item);
   _cache = _cache.slice(0, MAX_SAVED);
-  write(KEYS.SAVED, _cache.map(({ isFavorite, ...rest }) => rest));
+  write(
+    KEYS.SAVED,
+    _cache.map(({ isFavorite, ...rest }) => rest)
+  );
+  console.log(`${LOG} saveAI: local save success`, { id: item.id });
   return item;
 }
 
