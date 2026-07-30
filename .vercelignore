@@ -1,0 +1,4 @@
+docs/
+*.zip
+_tmp_*
+serve.ps1

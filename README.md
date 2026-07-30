@@ -28,20 +28,48 @@
 
 ---
 
-## セットアップ
+## iPhone から使う（本番デプロイ）
 
-### 1. Supabase プロジェクト作成
+ローカル環境ではなく **iPhone の Safari から URL を開いて使う** には、Vercel へデプロイします。
 
-1. [Supabase](https://supabase.com) でプロジェクトを作成
-2. **SQL Editor** で `supabase/migrations/001_enterprise.sql` を実行
-3. **Authentication → Users** で営業メンバーのアカウントを作成
-4. 最初の管理者は SQL でロールを付与:
+### 構成（Vercel デプロイ済み）
 
-```sql
-update public.profiles set role = 'admin' where email = 'admin@wamu-gr.co.jp';
-```
+| 項目 | 状態 |
+|---|---|
+| Vercel 設定 | `vercel.json` |
+| Next.js ビルド | `npm run build` |
+| GitHub 連携 | `1126fs-boop/ai-builder` |
+| レスポンシブ | `public/style.css`（640px 以下最適化） |
+| PWA | `manifest.webmanifest` + `sw.js` + iPhone メタタグ |
 
-### 2. 環境変数
+### あなたが行う作業（概要）
+
+詳細は **[docs/deploy-iphone.md](docs/deploy-iphone.md)** を参照してください。
+
+1. **Supabase** — プロジェクト作成 → SQL 実行 → ユーザー作成 → API キーを控える
+2. **GitHub** — リポジトリ `1126fs-boop/ai-builder` に最新コードがあることを確認
+3. **Vercel** — GitHub でログイン → リポジトリを Import → **Deploy**
+4. **Vercel** — Settings → Environment Variables に 3 変数を追加 → **Redeploy**
+5. **Supabase** — Authentication → URL Configuration に Vercel の URL を登録
+6. **iPhone** — Safari で Vercel の URL を開く → ログイン → ホーム画面に追加
+
+### 環境変数（Vercel に設定）
+
+| 変数名 | 説明 |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon public キー |
+| `NEXT_PUBLIC_APP_URL` | 本番 URL（例: `https://ai-builder-xxxx.vercel.app`） |
+
+---
+
+## ローカル開発
+
+### 前提
+
+Node.js 18 以上、`npm install` 済み
+
+### 環境変数
 
 `.env.local` を作成（`.env.example` を参照）:
 
@@ -51,7 +79,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-### 3. ローカル開発
+### 起動
 
 ```bash
 npm install
@@ -68,17 +96,29 @@ powershell -ExecutionPolicy Bypass -File .\serve.ps1
 
 ---
 
-## Vercel へのデプロイ
+## セットアップ（Supabase 詳細）
 
-1. GitHub リポジトリ `https://github.com/1126fs-boop/ai-builder` を Vercel に接続
-2. **Framework Preset**: Next.js（自動検出）
-3. **Environment Variables** に以下を設定:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `NEXT_PUBLIC_APP_URL`（本番 URL）
-4. デプロイ
+### 1. Supabase プロジェクト作成
 
-Supabase の **Authentication → URL Configuration** に本番 URL を追加:
+1. [Supabase](https://supabase.com) でプロジェクトを作成
+2. **SQL Editor** で `supabase/migrations/001_enterprise.sql` を実行
+3. **Authentication → Users** で営業メンバーのアカウントを作成
+4. 最初の管理者は SQL でロールを付与:
+
+```sql
+update public.profiles set role = 'admin' where email = 'admin@wamu-gr.co.jp';
+```
+
+---
+
+## Vercel へのデプロイ（技術メモ）
+
+- **Framework Preset**: Next.js（`vercel.json` で指定）
+- **Build Command**: `npm run build`
+- **Install Command**: `npm install`
+- GitHub に push すると Vercel が自動再デプロイ（連携後）
+
+Supabase の **Authentication → URL Configuration**:
 
 - Site URL: `https://your-app.vercel.app`
 - Redirect URLs: `https://your-app.vercel.app/auth/callback`
