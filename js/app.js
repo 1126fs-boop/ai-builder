@@ -1,12 +1,10 @@
 /**
- * AI Builder v0.3 — アプリエントリポイント
- *
- * 各モジュールを統合し、イベントを接続します。
+ * AI Builder v1.0 — エントリポイント
  */
 
 import { resetAll } from "./state.js";
 import { DOM, showView } from "./ui.js";
-import { initHomeView, renderHome, handleSearchInput, scrollToCategories } from "./homeView.js";
+import { initHomeView, renderHome, handleSearchInput, scrollToCategories, setLibraryFilter } from "./homeView.js";
 import { initQuestionView, startCategory, goNext, goPrev, goHomeFromQuestions } from "./questionView.js";
 import {
   initResultView,
@@ -18,14 +16,12 @@ import {
   goHomeFromResult,
 } from "./resultView.js";
 
-/* ── ホームへ戻る（共通） ── */
 function goHome() {
   resetAll();
   renderHome();
   showView("home");
 }
 
-/* ── モジュール初期化 ── */
 function init() {
   initHomeView({
     onStartCategory: startCategory,
@@ -37,21 +33,21 @@ function init() {
     onGoHome: goHome,
   });
 
-  initResultView({
-    onGoHome: goHome,
-  });
+  initResultView({ onGoHome: goHome });
 
-  /* ホーム */
   renderHome();
+
   DOM.searchInput.addEventListener("input", (e) => handleSearchInput(e.target.value));
   DOM.btnNewAi.addEventListener("click", scrollToCategories);
 
-  /* 質問 */
+  DOM.filterChips.forEach((chip) => {
+    chip.addEventListener("click", () => setLibraryFilter(chip.dataset.filter));
+  });
+
   DOM.btnNext.addEventListener("click", goNext);
   DOM.btnPrev.addEventListener("click", goPrev);
   DOM.btnTopHome.addEventListener("click", goHomeFromQuestions);
 
-  /* 結果 */
   DOM.btnCopy.addEventListener("click", copyPrompt);
   DOM.btnFavorite.addEventListener("click", handleFavoriteToggle);
   DOM.btnRestart.addEventListener("click", restartCategory);

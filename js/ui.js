@@ -1,8 +1,7 @@
 /**
- * AI Builder v0.3 — DOM 参照 & 共通 UI
+ * AI Builder v1.0 — DOM & 共通 UI
  */
 
-/** DOM 要素のキャッシュ */
 export const DOM = {
   viewHome: document.getElementById("view-home"),
   viewQuestions: document.getElementById("view-questions"),
@@ -10,28 +9,40 @@ export const DOM = {
 
   searchInput: document.getElementById("search-input"),
   btnNewAi: document.getElementById("btn-new-ai"),
-  recentList: document.getElementById("recent-list"),
+  libraryList: document.getElementById("library-list"),
+  libraryCount: document.getElementById("library-count"),
+  filterChips: document.querySelectorAll(".filter-chip"),
   popularGrid: document.getElementById("popular-grid"),
-  favoritesList: document.getElementById("favorites-list"),
   allCategoriesGrid: document.getElementById("all-categories-grid"),
 
   btnTopHome: document.getElementById("btn-top-home"),
+  wizardCategory: document.getElementById("wizard-category"),
   progressLabel: document.getElementById("progress-label"),
   progressSegments: document.getElementById("progress-segments"),
   questionCard: document.getElementById("question-card"),
   questionNumber: document.getElementById("question-number"),
   questionText: document.getElementById("question-text"),
+  questionHint: document.getElementById("question-hint"),
   optionsContainer: document.getElementById("options-container"),
   textInputArea: document.getElementById("text-input-area"),
   textInput: document.getElementById("text-input"),
   btnPrev: document.getElementById("btn-prev"),
   btnNext: document.getElementById("btn-next"),
+  btnNextLabel: document.getElementById("btn-next-label"),
 
+  generatingOverlay: document.getElementById("generating-overlay"),
+  resultGrade: document.getElementById("result-grade"),
+  resultTitle: document.getElementById("result-title"),
   resultCategoryLabel: document.getElementById("result-category-label"),
+  recommendedAi: document.getElementById("recommended-ai"),
   promptOutput: document.getElementById("prompt-output"),
   qualityStars: document.getElementById("quality-stars"),
   qualityScore: document.getElementById("quality-score"),
+  qualityGradeLabel: document.getElementById("quality-grade-label"),
+  dimensionsContainer: document.getElementById("dimensions-container"),
+  qualityStrengthsList: document.getElementById("quality-strengths-list"),
   qualityMissingList: document.getElementById("quality-missing-list"),
+  qualityRecommendation: document.getElementById("quality-recommendation"),
   btnCopy: document.getElementById("btn-copy"),
   btnCopyLabel: document.getElementById("btn-copy-label"),
   btnFavorite: document.getElementById("btn-favorite"),
@@ -41,7 +52,6 @@ export const DOM = {
   toast: document.getElementById("toast"),
 };
 
-/** @type {Record<string, HTMLElement>} */
 export const VIEWS = {
   home: DOM.viewHome,
   questions: DOM.viewQuestions,
@@ -50,10 +60,7 @@ export const VIEWS = {
 
 let toastTimer = null;
 
-/**
- * ビュー切り替え
- * @param {"home"|"questions"|"result"} name
- */
+/** @param {"home"|"questions"|"result"} name */
 export function showView(name) {
   Object.entries(VIEWS).forEach(([key, el]) => {
     const active = key === name;
@@ -63,15 +70,13 @@ export function showView(name) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-/** トースト通知 */
 export function showToast(message) {
   DOM.toast.textContent = message;
   DOM.toast.classList.add("toast--visible");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => DOM.toast.classList.remove("toast--visible"), 2500);
+  toastTimer = setTimeout(() => DOM.toast.classList.remove("toast--visible"), 2800);
 }
 
-/** クリップボードにコピー */
 export async function copyToClipboard(text) {
   try {
     await navigator.clipboard.writeText(text);
@@ -86,10 +91,18 @@ export async function copyToClipboard(text) {
   }
 }
 
-/** SVG アイコン（次へ） */
-export const ICON_NEXT = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>`;
+export function renderEmpty(container, message, icon = "📭") {
+  container.innerHTML = `<div class="empty-state"><span class="empty-state__icon">${icon}</span><p>${message}</p></div>`;
+}
 
-/** 空状態メッセージ */
-export function renderEmpty(container, message) {
-  container.innerHTML = `<p class="empty-state">${message}</p>`;
+/** 生成中オーバーレイ */
+export function showGenerating(show) {
+  DOM.generatingOverlay.hidden = !show;
+}
+
+/** HTML エスケープ */
+export function esc(str) {
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
 }

@@ -1,44 +1,58 @@
 /**
- * AI Builder v0.3 — 質問フロー
+ * AI Builder v1.0 — AI作成ウィザード
  */
 
+import { getCategory } from "../categories.js";
 import { getQuestions } from "../questions.js";
 import { state, resetFlow } from "./state.js";
-import { DOM, showView, ICON_NEXT } from "./ui.js";
+import { DOM, showView } from "./ui.js";
+import { addRecentCategory } from "./storage.js";
 
-/** @type {() => void} */
 let onComplete = () => {};
-
-/** @type {() => void} */
 let onGoHome = () => {};
 
-/**
- * コールバックを登録
- * @param {{ onComplete: () => void, onGoHome: () => void }} handlers
- */
+/** 質問ヒント（営業現場のガイド） */
+const QUESTION_HINTS = {
+  industry: "商談先のサロン・クリニックの業種を選んでください",
+  client_challenge: "お客様が抱える経営課題。ソリューション提案の起点になります",
+  sales_type: "今日の営業アクションの種類",
+  goal: "この営業で達成したいこと",
+  ai_role: "AI に担ってほしい役割・専門性",
+  tone: "取引先に合った文体",
+  output_format: "ChatGPT に貼り付けた後の出力形式",
+  extra_info: "取引先名・競合・予算感など。入力すると品質スコアが大幅アップ",
+};
+
 export function initQuestionView(handlers) {
   onComplete = handlers.onComplete;
   onGoHome = handlers.onGoHome;
+
+  document.addEventListener("keydown", handleWizardKeydown);
 }
 
-/**
- * カテゴリの質問フローを開始
- * @param {string} categoryId
- */
+function handleWizardKeydown(e) {
+  if (e.key !== "Enter" || e.shiftKey) return;
+  if (!DOM.viewQuestions.classList.contains("view--active")) return;
+  if (DOM.btnNext.disabled) return;
+  e.preventDefault();
+  goNext();
+}
+
 export function startCategory(categoryId) {
+  const category = getCategory(categoryId);
+  if (!category) return;
+
   state.categoryId = categoryId;
   resetFlow();
   state.categoryId = categoryId;
+
+  DOM.wizardCategory.textContent = `${category.icon} ${category.label}`;
+  addRecentCategory(categoryId);
+
   renderQuestion();
   showView("questions");
 }
 
-/** 現在の質問を取得 */
-function getCurrentQuestion() {
-  return getQuestions(state.categoryId)[state.questionIndex];
-}
-
-/** 進捗バーを描画 */
 function renderProgress(current, total) {
   DOM.progressLabel.textContent = `質問 ${current} / ${total}`;
 
@@ -51,10 +65,10 @@ function renderProgress(current, total) {
     DOM.progressSegments.appendChild(seg);
   }
 
-  DOM.progressSegments.setAttribute("aria-valuenow", String(Math.round((current / total) * 100)));
+  const pct = Math.round((current / total) * 100);
+  DOM.progressSegments.setAttribute("aria-valuenow", String(pct));
 }
 
-/** 質問画面を描画 */
 export function renderQuestion() {
   const questions = getQuestions(state.categoryId);
   const question = questions[state.questionIndex];
@@ -66,8 +80,10 @@ export function renderQuestion() {
   void DOM.questionCard.offsetWidth;
   DOM.questionCard.classList.add("question-card--enter");
 
-  DOM.questionNumber.textContent = `Q${index + 1}`;
+  DOM.questionNumber.textContent = `STEP ${index + 1}`;
   DOM.questionText.textContent = question.text;
+  DOM.questionHint.textContent = QUESTION_HINTS[question.id] || "";
+  DOM.questionHint.hidden = !QUESTION_HINTS[question.id];
 
   DOM.optionsContainer.innerHTML = "";
   DOM.textInputArea.hidden = true;
@@ -87,8 +103,10 @@ export function renderQuestion() {
 }
 
 function renderChoices(question, saved) {
-  question.options.forEach((opt) => {
+  question.options.forEach((opt, i) => {
     const btn = createOptionBtn(opt, saved === opt);
+    btn.style.animationDelay = `${i * 0.04}s`;
+    btn.classList.add("option-btn--animate");
     btn.addEventListener("click", () => selectChoice(question, opt, btn));
     DOM.optionsContainer.appendChild(btn);
   });
@@ -97,9 +115,11 @@ function renderChoices(question, saved) {
 function renderChoiceWithCustom(question, saved) {
   const isCustom = saved && !question.options.includes(saved);
 
-  question.options.forEach((opt) => {
+  question.options.forEach((opt, i) => {
     const selected = opt === "自由入力" ? isCustom : saved === opt;
     const btn = createOptionBtn(opt, selected);
+    btn.style.animationDelay = `${i * 0.04}s`;
+    btn.classList.add("option-btn--animate");
     btn.addEventListener("click", () => {
       if (opt === "自由入力") selectCustom(question);
       else selectChoice(question, opt, btn);
@@ -118,6 +138,7 @@ function renderTextInput(question, saved) {
     state.answers[question.id] = DOM.textInput.value.trim();
     updateNavButtons(question);
   };
+  setTimeout(() => DOM.textInput.focus(), 300);
 }
 
 function showTextInput(question, value) {
@@ -129,7 +150,7 @@ function showTextInput(question, value) {
     state.answers[question.id] = DOM.textInput.value.trim();
     updateNavButtons(question);
   };
-  DOM.textInput.focus();
+  setTimeout(() => DOM.textInput.focus(), 200);
 }
 
 function createOptionBtn(label, selected) {
@@ -148,6 +169,14 @@ function selectChoice(question, option, btn) {
   DOM.textInputArea.hidden = true;
   highlightOption(btn);
   updateNavButtons(question);
+
+  // 選択肢タップ後、短い遅延で次へ（ウィザード UX）
+  if (question.type === "choice") {
+    DOM.btnNext.disabled = false;
+    setTimeout(() => {
+      if (state.answers[question.id] === option) goNext();
+    }, 450);
+  }
 }
 
 function selectCustom(question) {
@@ -177,10 +206,9 @@ function updateNavButtons(question) {
 
   const total = getQuestions(state.categoryId).length;
   const isLast = state.questionIndex >= total - 1;
-  DOM.btnNext.innerHTML = isLast ? `完成 ${ICON_NEXT}` : `次へ ${ICON_NEXT}`;
+  DOM.btnNextLabel.textContent = isLast ? "プロンプトを生成" : "次へ";
 }
 
-/** 次へ */
 export function goNext() {
   const total = getQuestions(state.categoryId).length;
   if (state.questionIndex >= total - 1) {
@@ -192,7 +220,6 @@ export function goNext() {
   }
 }
 
-/** 戻る（回答は state.answers に保持） */
 export function goPrev() {
   if (state.questionIndex > 0) {
     state.questionIndex--;
@@ -203,7 +230,6 @@ export function goPrev() {
   }
 }
 
-/** ホームボタン */
 export function goHomeFromQuestions() {
   onGoHome();
 }

@@ -1,115 +1,139 @@
 /**
- * AI Builder v0.3 — 結果画面
+ * AI Builder v1.0 — 結果画面（保存・品質診断・AI評価）
  */
 
 import { getCategory } from "../categories.js";
-import { buildPrompt, generateTitle, getQualityCheck, formatStars } from "../promptBuilder.js";
+import { buildPrompt, generateTitle, evaluatePrompt, formatStars } from "../promptBuilder.js";
 import {
-  savePrompt,
-  getSavedPrompt,
+  saveAI,
+  getAI,
   toggleFavorite,
   isFavorite,
-  addRecentCategory,
+  addRecentAI,
+  deleteAI,
 } from "./storage.js";
 import { state } from "./state.js";
-import { DOM, showView, showToast, copyToClipboard } from "./ui.js";
+import { DOM, showView, showToast, copyToClipboard, showGenerating, esc } from "./ui.js";
 import { startCategory } from "./questionView.js";
 
-/** @type {() => void} */
 let onGoHome = () => {};
-
-/** 現在表示中の保存 ID */
 let currentSavedId = null;
 
-/**
- * コールバックを登録
- * @param {{ onGoHome: () => void }} handlers
- */
 export function initResultView(handlers) {
   onGoHome = handlers.onGoHome;
 }
 
-/** 回答から結果を生成して表示 */
-export function showGeneratedResult() {
+/** 回答から結果を生成 */
+export async function showGeneratedResult() {
+  showView("result");
+  showGenerating(true);
+
+  // 生成アニメーション（UX: 品質計算の体感）
+  await delay(800);
+
   const category = getCategory(state.categoryId);
+  const quality = evaluatePrompt(state.categoryId, state.answers);
   const prompt = buildPrompt(state.categoryId, state.answers);
-  const quality = getQualityCheck(state.categoryId);
   const title = generateTitle(category.label, state.answers);
 
-  const saved = savePrompt({
+  const saved = saveAI({
     title,
     category: state.categoryId,
     categoryLabel: category.label,
     prompt,
+    answers: { ...state.answers },
+    quality,
   });
 
   currentSavedId = saved.id;
   state.savedPromptId = saved.id;
-  addRecentCategory(state.categoryId);
+  addRecentAI(saved.id);
 
-  renderResult(category.label, category.icon, prompt, quality, saved.id);
-  showView("result");
+  renderResult(saved);
+  showGenerating(false);
 }
 
-/**
- * 保存済みプロンプトを開く
- * @param {string} savedId
- */
+/** ライブラリから開く */
 export function openSavedResult(savedId) {
-  const item = getSavedPrompt(savedId);
+  const item = getAI(savedId);
   if (!item) return;
 
-  const category = getCategory(item.category);
   currentSavedId = item.id;
   state.savedPromptId = item.id;
   state.categoryId = item.category;
 
-  renderResult(
-    item.categoryLabel,
-    category?.icon || "📄",
-    item.prompt,
-    getQualityCheck(item.category),
-    item.id
-  );
+  renderResult(item);
   showView("result");
 }
 
-/**
- * 結果画面を描画
- * @param {string} label
- * @param {string} icon
- * @param {string} prompt
- * @param {{ score: number, stars: number, missing: string[] }} quality
- * @param {string} savedId
- */
-function renderResult(label, icon, prompt, quality, savedId) {
-  DOM.resultCategoryLabel.textContent = `${icon} ${label}`;
-  DOM.promptOutput.textContent = prompt;
+/** 結果画面描画 */
+function renderResult(item) {
+  const quality = item.quality || evaluatePrompt(item.category, item.answers || {});
 
-  DOM.qualityStars.textContent = formatStars(quality.stars);
-  DOM.qualityScore.textContent = `${quality.score}点`;
+  DOM.resultGrade.textContent = quality.grade;
+  DOM.resultGrade.className = `result-header__grade result-header__grade--${quality.grade.toLowerCase()}`;
+  DOM.resultTitle.textContent = item.title;
+  DOM.resultCategoryLabel.textContent = `${getCategory(item.category)?.icon || "📄"} ${item.categoryLabel}`;
+  DOM.promptOutput.textContent = item.prompt;
+  DOM.recommendedAi.textContent = quality.recommendedAi;
 
-  DOM.qualityMissingList.innerHTML = "";
-  quality.missing.forEach((text) => {
-    const li = document.createElement("li");
-    li.textContent = text;
-    DOM.qualityMissingList.appendChild(li);
-  });
+  DOM.qualityStars.textContent = formatStars(quality.score);
+  DOM.qualityScore.textContent = quality.score;
+  DOM.qualityGradeLabel.textContent = quality.gradeLabel;
 
-  updateFavoriteButton(savedId);
+  renderDimensions(quality.dimensions);
+  renderList(DOM.qualityStrengthsList, quality.strengths, "quality-strengths-list");
+  renderList(DOM.qualityMissingList, quality.missing, "quality-missing-list");
+  DOM.qualityRecommendation.textContent = quality.recommendation;
 
+  updateFavoriteButton(item.id);
   DOM.btnCopy.classList.remove("btn--copied");
-  DOM.btnCopyLabel.textContent = "コピー";
+  DOM.btnCopyLabel.textContent = "プロンプトをコピー";
 }
 
-/** お気に入りボタンの状態更新 */
+function renderDimensions(dimensions) {
+  DOM.dimensionsContainer.innerHTML = "";
+  dimensions.forEach((d) => {
+    const el = document.createElement("div");
+    el.className = "dimension";
+    el.innerHTML = `
+      <div class="dimension__header">
+        <span class="dimension__label">${esc(d.label)}</span>
+        <span class="dimension__value">${d.score}</span>
+      </div>
+      <div class="dimension__bar">
+        <div class="dimension__fill" style="width:0%" data-target="${d.score}"></div>
+      </div>
+    `;
+    DOM.dimensionsContainer.appendChild(el);
+  });
+
+  requestAnimationFrame(() => {
+    DOM.dimensionsContainer.querySelectorAll(".dimension__fill").forEach((bar) => {
+      bar.style.width = `${bar.dataset.target}%`;
+    });
+  });
+}
+
+function renderList(container, items, className) {
+  container.innerHTML = "";
+  if (items.length === 0) {
+    container.innerHTML = `<li class="${className}__empty">—</li>`;
+    return;
+  }
+  items.forEach((text) => {
+    const li = document.createElement("li");
+    li.textContent = text;
+    container.appendChild(li);
+  });
+}
+
 function updateFavoriteButton(savedId) {
   const fav = isFavorite(savedId);
   DOM.btnFavorite.textContent = fav ? "★ お気に入り済み" : "☆ お気に入りに追加";
   DOM.btnFavorite.classList.toggle("btn--favorited", fav);
 }
 
-/** コピー */
 export async function copyPrompt() {
   await copyToClipboard(DOM.promptOutput.textContent);
   DOM.btnCopy.classList.add("btn--copied");
@@ -117,7 +141,6 @@ export async function copyPrompt() {
   showToast("クリップボードにコピーしました");
 }
 
-/** お気に入りトグル */
 export function handleFavoriteToggle() {
   if (!currentSavedId) return;
   const nowFav = toggleFavorite(currentSavedId);
@@ -125,12 +148,19 @@ export function handleFavoriteToggle() {
   showToast(nowFav ? "お気に入りに追加しました" : "お気に入りを解除しました");
 }
 
-/** 同カテゴリを最初から */
 export function restartCategory() {
   if (state.categoryId) startCategory(state.categoryId);
 }
 
-/** ホームへ */
 export function goHomeFromResult() {
   onGoHome();
+}
+
+/** 長押し削除用（ライブラリから） */
+export function removeCurrentAI() {
+  if (currentSavedId) deleteAI(currentSavedId);
+}
+
+function delay(ms) {
+  return new Promise((r) => setTimeout(r, ms));
 }
