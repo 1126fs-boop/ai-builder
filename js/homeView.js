@@ -159,6 +159,6 @@ export function handleSearchInput(value) {
   renderHome();
 }
 
-export function scrollToCategories() {
-  document.getElementById("section-all-categories")?.scrollIntoView({ behavior: "smooth" });
+export function handleNewAiClick() {
+  onStartCategory("sales");
 }
