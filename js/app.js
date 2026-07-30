@@ -15,6 +15,7 @@ import {
   restartCategory,
   goHomeFromResult,
 } from "./resultView.js";
+import { registerServiceWorker } from "./pwa.js";
 
 function goHome() {
   resetAll();
@@ -52,6 +53,8 @@ function init() {
   DOM.btnFavorite.addEventListener("click", handleFavoriteToggle);
   DOM.btnRestart.addEventListener("click", restartCategory);
   DOM.btnHome.addEventListener("click", goHomeFromResult);
+
+  registerServiceWorker();
 }
 
 document.addEventListener("DOMContentLoaded", init);

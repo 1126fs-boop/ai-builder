@@ -1,0 +1,11 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.zip
+
+# Temp / scrape artifacts
+_tmp_*
+_wam_*.json
