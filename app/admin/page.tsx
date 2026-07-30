@@ -76,6 +76,9 @@ export default function AdminPage() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem("ai_builder_saved_email");
+    }
     window.location.href = "/login";
   }
 

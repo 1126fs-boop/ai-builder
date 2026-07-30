@@ -3,6 +3,12 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "installCommand": "npm install",
+  "git": {
+    "deploymentEnabled": {
+      "cursor/ai-builder-web-app": true,
+      "main": true
+    }
+  },
   "headers": [
     {
       "source": "/sw.js",

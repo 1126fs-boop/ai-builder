@@ -2,7 +2,7 @@
  * AI Builder v2.0 — 保存管理（Supabase + LocalStorage フォールバック）
  */
 
-import { getSupabase, isCloudEnabled, getCurrentUser } from "./supabaseClient.js";
+import { getSupabase, isCloudEnabled, getCurrentUser, SAVED_EMAIL_KEY } from "./supabaseClient.js";
 import { withTimeout } from "./asyncUtils.js";
 
 const LOG = "[storage]";
@@ -22,6 +22,21 @@ const LEGACY = {
 
 const MAX_RECENT = 10;
 const MAX_SAVED = 100;
+
+/** @type {string[]} */
+let _recentIds = [];
+/** @type {string[]} */
+let _recentCategoryIds = [];
+/** @type {Record<string, unknown>} */
+let _settings = {};
+
+/** ユーザーごとに localStorage キーを分離 */
+function storageKey(base) {
+  const email = localStorage.getItem(SAVED_EMAIL_KEY);
+  if (!email) return base;
+  const suffix = email.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+  return `${base}_${suffix}`;
+}
 
 /** @type {import("../qualityEngine.js").SavedAI[]} */
 let _cache = [];
@@ -44,7 +59,7 @@ let _ready = false;
 
 function read(key, fallback) {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(storageKey(key));
     return raw ? JSON.parse(raw) : fallback;
   } catch {
     return fallback;
@@ -52,7 +67,44 @@ function read(key, fallback) {
 }
 
 function write(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+  localStorage.setItem(storageKey(key), JSON.stringify(value));
+}
+
+async function loadUserPreferences(userId) {
+  const sb = await getSupabase();
+  if (!sb) return;
+
+  const { data } = await sb
+    .from("user_preferences")
+    .select("recent_ai_ids, recent_category_ids, settings")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (data) {
+    _recentIds = Array.isArray(data.recent_ai_ids) ? data.recent_ai_ids : [];
+    _recentCategoryIds = Array.isArray(data.recent_category_ids) ? data.recent_category_ids : [];
+    _settings = data.settings && typeof data.settings === "object" ? data.settings : {};
+    return;
+  }
+
+  // 初回: 端末のローカルデータを引き継ぐ
+  _recentIds = read(KEYS.RECENT, []);
+  _recentCategoryIds = read("aibuilder_v1_recent_cat", []);
+  _settings = read("aibuilder_v1_settings", {});
+
+  await persistUserPreferences(userId);
+}
+
+async function persistUserPreferences(userId) {
+  const sb = await getSupabase();
+  if (!sb) return;
+
+  await sb.from("user_preferences").upsert({
+    user_id: userId,
+    recent_ai_ids: _recentIds,
+    recent_category_ids: _recentCategoryIds,
+    settings: _settings,
+  });
 }
 
 function generateId() {
@@ -124,6 +176,9 @@ export async function initStorage() {
       ...item,
       isFavorite: read(KEYS.FAVORITES, []).includes(item.id),
     }));
+    _recentIds = read(KEYS.RECENT, []);
+    _recentCategoryIds = read("aibuilder_v1_recent_cat", []);
+    _settings = read("aibuilder_v1_settings", {});
     _ready = true;
     return;
   }
@@ -155,6 +210,8 @@ export async function initStorage() {
   if (localItems.length > 0 && _cache.length === 0) {
     await migrateLocalToCloud(localItems, user.id);
   }
+
+  await loadUserPreferences(user.id);
 
   _ready = true;
 }
@@ -291,7 +348,14 @@ export async function deleteAI(id) {
     );
     removeFavoriteLocal(id);
   }
-  removeRecentAI(id);
+
+  _recentIds = _recentIds.filter((r) => r !== id);
+  if (_cloud) {
+    const user = await getCurrentUser();
+    if (user) await persistUserPreferences(user.id);
+  } else {
+    write(KEYS.RECENT, _recentIds);
+  }
 }
 
 /** @param {string} id @param {string} title */
@@ -367,37 +431,60 @@ function removeFavoriteLocal(id) {
 
 /* ── 最近使った AI ── */
 
-export function addRecentAI(aiId) {
-  let recent = read(KEYS.RECENT, []);
-  recent = recent.filter((id) => id !== aiId);
-  recent.unshift(aiId);
-  write(KEYS.RECENT, recent.slice(0, MAX_RECENT));
-}
+export async function addRecentAI(aiId) {
+  _recentIds = _recentIds.filter((id) => id !== aiId);
+  _recentIds.unshift(aiId);
+  _recentIds = _recentIds.slice(0, MAX_RECENT);
 
-function removeRecentAI(id) {
-  write(
-    KEYS.RECENT,
-    read(KEYS.RECENT, []).filter((r) => r !== id)
-  );
+  if (_cloud) {
+    const user = await getCurrentUser();
+    if (user) await persistUserPreferences(user.id);
+  } else {
+    write(KEYS.RECENT, _recentIds);
+  }
 }
 
 /** @returns {SavedAI[]} */
 export function getRecentAI() {
-  const ids = read(KEYS.RECENT, []);
   const map = new Map(getAllAI().map((p) => [p.id, p]));
-  return ids.map((id) => map.get(id)).filter(Boolean);
+  return _recentIds.map((id) => map.get(id)).filter(Boolean);
 }
 
-export function addRecentCategory(categoryId) {
-  let cats = read("aibuilder_v1_recent_cat", []);
-  cats = cats.filter((c) => c !== categoryId);
-  cats.unshift(categoryId);
-  write("aibuilder_v1_recent_cat", cats.slice(0, 8));
+export async function addRecentCategory(categoryId) {
+  _recentCategoryIds = _recentCategoryIds.filter((c) => c !== categoryId);
+  _recentCategoryIds.unshift(categoryId);
+  _recentCategoryIds = _recentCategoryIds.slice(0, 8);
+
+  if (_cloud) {
+    const user = await getCurrentUser();
+    if (user) await persistUserPreferences(user.id);
+  } else {
+    write("aibuilder_v1_recent_cat", _recentCategoryIds);
+  }
 }
 
 /** @returns {string[]} */
 export function getRecentCategoryIds() {
-  return read("aibuilder_v1_recent_cat", []);
+  return _recentCategoryIds;
+}
+
+/* ── ユーザー設定 ── */
+
+/** @returns {Record<string, unknown>} */
+export function getUserSettings() {
+  return { ..._settings };
+}
+
+/** @param {Record<string, unknown>} partial */
+export async function saveUserSettings(partial) {
+  _settings = { ..._settings, ...partial };
+
+  if (_cloud) {
+    const user = await getCurrentUser();
+    if (user) await persistUserPreferences(user.id);
+  } else {
+    write("aibuilder_v1_settings", _settings);
+  }
 }
 
 export function getLibraryStats() {

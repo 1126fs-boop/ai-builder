@@ -28,30 +28,81 @@
 
 ---
 
-## iPhone から使う（本番デプロイ）
+## iPhone から使う（Vercel デプロイ）
 
-ローカル環境ではなく **iPhone の Safari から URL を開いて使う** には、Vercel へデプロイします。
+ローカル（`localhost`）は iPhone から開けません。**Vercel にデプロイして HTTPS の URL を取得** すれば、外出先の iPhone からも利用できます。
 
-### 構成（Vercel デプロイ済み）
+### コード側で準備済みのもの
 
-| 項目 | 状態 |
+| 項目 | ファイル |
 |---|---|
 | Vercel 設定 | `vercel.json` |
-| Next.js ビルド | `npm run build` |
-| GitHub 連携 | `1126fs-boop/ai-builder` |
+| 環境変数テンプレート | `.env.vercel.example` |
+| PWA（ホーム画面追加） | `public/manifest.webmanifest` + `public/sw.js` |
 | レスポンシブ | `public/style.css`（640px 以下最適化） |
-| PWA | `manifest.webmanifest` + `sw.js` + iPhone メタタグ |
+| PWA アイコン | `public/icons/icon-192.png` / `icon-512.png` |
 
-### あなたが行う作業（概要）
+GitHub リポジトリ: **https://github.com/1126fs-boop/ai-builder**  
+デプロイ推奨ブランチ: **`cursor/ai-builder-web-app`**
+
+---
+
+### あなたが行う作業（手順概要）
 
 詳細は **[docs/deploy-iphone.md](docs/deploy-iphone.md)** を参照してください。
 
-1. **Supabase** — プロジェクト作成 → SQL 実行 → ユーザー作成 → API キーを控える
-2. **GitHub** — リポジトリ `1126fs-boop/ai-builder` に最新コードがあることを確認
-3. **Vercel** — GitHub でログイン → リポジトリを Import → **Deploy**
-4. **Vercel** — Settings → Environment Variables に 3 変数を追加 → **Redeploy**
-5. **Supabase** — Authentication → URL Configuration に Vercel の URL を登録
-6. **iPhone** — Safari で Vercel の URL を開く → ログイン → ホーム画面に追加
+#### ステップ 1 — Supabase を準備
+
+1. https://supabase.com にログイン → **New project** でプロジェクト作成
+2. **SQL Editor** で `supabase/migrations/001_enterprise.sql` を実行
+3. **Project Settings → API** から URL と anon キーを控える
+4. **Authentication → Providers → Email** で **Enable sign ups** を ON
+
+#### ステップ 2 — GitHub に push
+
+```powershell
+cd c:\Users\user\ai-builder
+git add .
+git commit -m "Prepare Vercel deploy for iPhone access"
+git push origin cursor/ai-builder-web-app
+```
+
+#### ステップ 3 — Vercel にデプロイ
+
+1. https://vercel.com を開く → **Continue with GitHub** でログイン
+2. **Add New… → Project** → **`1126fs-boop/ai-builder`** を **Import**
+3. Production Branch を `cursor/ai-builder-web-app` に設定
+4. **Deploy** をクリック → **Ready** になるまで待つ
+5. 表示された URL（例: `https://ai-builder-xxxx.vercel.app`）を控える
+
+#### ステップ 4 — 環境変数を設定 → 再デプロイ
+
+Vercel → **Settings → Environment Variables** に以下を追加（Production / Preview / Development すべて）:
+
+| 変数名 | 値 |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase の Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase の anon キー |
+| `NEXT_PUBLIC_APP_URL` | Vercel の URL |
+
+追加後、**Deployments → ⋯ → Redeploy** をクリック。
+
+#### ステップ 5 — Supabase に本番 URL を登録
+
+**Authentication → URL Configuration** で設定:
+
+| 項目 | 値 |
+|---|---|
+| Site URL | `https://ai-builder-xxxx.vercel.app` |
+| Redirect URLs | `https://.../auth/callback` と `https://.../login/reset-password` |
+
+#### ステップ 6 — iPhone で開く
+
+1. Safari で Vercel の URL を開く
+2. **新規登録** または **ログイン**
+3. 共有ボタン → **ホーム画面に追加**（PWA）
+
+---
 
 ### 環境変数（Vercel に設定）
 
@@ -60,6 +111,8 @@
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon public キー |
 | `NEXT_PUBLIC_APP_URL` | 本番 URL（例: `https://ai-builder-xxxx.vercel.app`） |
+
+テンプレート: `.env.vercel.example`
 
 ---
 
@@ -113,15 +166,16 @@ update public.profiles set role = 'admin' where email = 'admin@wamu-gr.co.jp';
 
 ## Vercel へのデプロイ（技術メモ）
 
-- **Framework Preset**: Next.js（`vercel.json` で指定）
-- **Build Command**: `npm run build`
-- **Install Command**: `npm install`
-- GitHub に push すると Vercel が自動再デプロイ（連携後）
+| 項目 | 値 |
+|---|---|
+| Framework Preset | Next.js（`vercel.json` で指定） |
+| Build Command | `npm run build` |
+| Install Command | `npm install` |
+| Node.js | 18.17.0 以上（`package.json` の `engines`） |
 
-Supabase の **Authentication → URL Configuration**:
+GitHub に push すると Vercel が自動再デプロイ（連携後）。
 
-- Site URL: `https://your-app.vercel.app`
-- Redirect URLs: `https://your-app.vercel.app/auth/callback`
+PWA アイコン再生成: `npm run generate:icons`
 
 ---
 

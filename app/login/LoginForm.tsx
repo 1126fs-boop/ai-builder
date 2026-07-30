@@ -1,32 +1,79 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
+import { validateEmail } from "@/lib/auth/validation";
+import { loginWithEmail, getSavedEmail } from "@/lib/auth/email-login";
+import AuthShell from "./AuthShell";
+import "./auth-form.css";
 
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/index.html";
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const savedEmail = getSavedEmail();
+  const [email, setEmail] = useState(savedEmail || "");
+  const [loading, setLoading] = useState(Boolean(savedEmail));
+  const [checking, setChecking] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [fieldError, setFieldError] = useState("");
 
-  async function handleLogin(e: React.FormEvent) {
+  useEffect(() => {
+    async function tryAutoLogin() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        router.replace(redirect);
+        router.refresh();
+        return;
+      }
+
+      const saved = getSavedEmail();
+      if (saved) {
+        setLoading(true);
+        const result = await loginWithEmail(saved);
+        if (result.ok) {
+          router.replace(redirect);
+          router.refresh();
+          return;
+        }
+        setError(result.error);
+        if (result.pendingEmail) setSuccess(result.error);
+        setLoading(false);
+      }
+
+      setChecking(false);
+    }
+
+    tryAutoLogin();
+  }, [redirect, router]);
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    const validation = validateEmail(email);
+    if (!validation.valid) {
+      setFieldError(validation.message);
+      return;
+    }
+
     setLoading(true);
     setError("");
+    setSuccess("");
+    setFieldError("");
 
-    const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (authError) {
-      setError("ログインに失敗しました。メールアドレスとパスワードを確認してください。");
+    const result = await loginWithEmail(email);
+    if (!result.ok) {
+      if (result.pendingEmail) {
+        setSuccess(result.error);
+        setError("");
+      } else {
+        setError(result.error);
+      }
       setLoading(false);
       return;
     }
@@ -35,143 +82,54 @@ export default function LoginForm() {
     router.refresh();
   }
 
+  if (checking) {
+    return (
+      <AuthShell title="AI Builder" subtitle="読み込み中...">
+        <p className="login__help">ログイン状態を確認しています</p>
+      </AuthShell>
+    );
+  }
+
   return (
-    <div className="login">
-      <div className="login__card">
-        <div className="login__badge">株式会社ワム · 営業チーム</div>
-        <h1 className="login__title">AI Builder</h1>
-        <p className="login__subtitle">営業メンバー専用プロンプト生成アプリ</p>
+    <AuthShell
+      title="AI Builder"
+      subtitle="メールアドレスを入力して開始してください"
+    >
+      <form onSubmit={handleSubmit} className="login__form" noValidate>
+        <label className="login__label">
+          メールアドレス
+          <input
+            type="email"
+            className={`login__input${fieldError ? " login__input--error" : ""}`}
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (fieldError) setFieldError("");
+            }}
+            placeholder="name@wamu-gr.co.jp"
+            autoComplete="email"
+            inputMode="email"
+            autoFocus
+            disabled={Boolean(success)}
+          />
+          {fieldError && <span className="login__field-error">{fieldError}</span>}
+        </label>
 
-        <form onSubmit={handleLogin} className="login__form">
-          <label className="login__label">
-            メールアドレス
-            <input
-              type="email"
-              className="login__input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@wamu-gr.co.jp"
-              required
-              autoComplete="email"
-            />
-          </label>
-          <label className="login__label">
-            パスワード
-            <input
-              type="password"
-              className="login__input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-            />
-          </label>
-          {error && <p className="login__error">{error}</p>}
+        {error && <p className="login__error" role="alert">{error}</p>}
+        {success && <p className="login__success" role="status">{success}</p>}
+
+        {!success && (
           <button type="submit" className="login__btn" disabled={loading}>
-            {loading ? "ログイン中..." : "ログイン"}
+            {loading ? "ログイン中..." : "はじめる"}
           </button>
-        </form>
+        )}
+      </form>
 
-        <p className="login__help">
-          アカウント未発行の方は管理者にお問い合わせください。
-        </p>
-      </div>
-
-      <style jsx>{`
-        .login {
-          min-height: 100dvh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 24px;
-          background: linear-gradient(160deg, #eff6ff 0%, #f7f7f8 50%, #ffffff 100%);
-        }
-        .login__card {
-          width: 100%;
-          max-width: 400px;
-          background: #fff;
-          border: 1px solid #ececf1;
-          border-radius: 20px;
-          padding: 32px 28px;
-          box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
-        }
-        .login__badge {
-          display: inline-block;
-          font-size: 0.68rem;
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          color: #2563eb;
-          background: #eff6ff;
-          padding: 5px 12px;
-          border-radius: 9999px;
-          margin-bottom: 16px;
-        }
-        .login__title {
-          font-size: 1.75rem;
-          font-weight: 700;
-          letter-spacing: -0.03em;
-          margin-bottom: 6px;
-        }
-        .login__subtitle {
-          font-size: 0.875rem;
-          color: #6e6e80;
-          margin-bottom: 28px;
-        }
-        .login__form {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-        .login__label {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          font-size: 0.8rem;
-          font-weight: 600;
-          color: #6e6e80;
-        }
-        .login__input {
-          padding: 14px 16px;
-          font-size: 1rem;
-          border: 1.5px solid #ececf1;
-          border-radius: 10px;
-          outline: none;
-          min-height: 48px;
-        }
-        .login__input:focus {
-          border-color: #2563eb;
-          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-        }
-        .login__error {
-          font-size: 0.85rem;
-          color: #dc2626;
-          background: #fef2f2;
-          padding: 10px 12px;
-          border-radius: 8px;
-        }
-        .login__btn {
-          min-height: 48px;
-          padding: 14px;
-          font-size: 1rem;
-          font-weight: 600;
-          color: #fff;
-          background: #2563eb;
-          border: none;
-          border-radius: 10px;
-          cursor: pointer;
-          margin-top: 4px;
-        }
-        .login__btn:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-        .login__help {
-          margin-top: 20px;
-          font-size: 0.78rem;
-          color: #acacbe;
-          text-align: center;
-        }
-      `}</style>
-    </div>
+      <p className="login__help">
+        初回のみメールアドレスの入力が必要です。
+        <br />
+        次回以降は自動的にログインします。
+      </p>
+    </AuthShell>
   );
 }

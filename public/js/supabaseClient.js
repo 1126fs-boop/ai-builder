@@ -4,6 +4,9 @@
 
 import { createBrowserClient } from "https://esm.sh/@supabase/ssr@0.5.2";
 
+/** 端末に保存するメールアドレス（次回自動ログイン用） */
+export const SAVED_EMAIL_KEY = "ai_builder_saved_email";
+
 let client = null;
 let config = null;
 
@@ -57,5 +60,6 @@ export async function getProfile() {
 export async function signOut() {
   const sb = await getSupabase();
   if (sb) await sb.auth.signOut();
+  localStorage.removeItem(SAVED_EMAIL_KEY);
   window.location.href = "/login";
 }
