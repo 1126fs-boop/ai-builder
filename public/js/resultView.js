@@ -36,7 +36,7 @@ export async function showGeneratedResult() {
   const prompt = buildPrompt(state.categoryId, state.answers);
   const title = generateTitle(category.label, state.answers);
 
-  const saved = saveAI({
+  const saved = await saveAI({
     title,
     category: state.categoryId,
     categoryLabel: category.label,
@@ -51,6 +51,30 @@ export async function showGeneratedResult() {
 
   renderResult(saved);
   showGenerating(false);
+}
+
+/** 共通テンプレートから結果画面を開く */
+export function openTemplateResult(template) {
+  const category = getCategory(template.category);
+  const quality = evaluatePrompt(template.category, {});
+
+  const item = {
+    id: null,
+    title: template.name,
+    category: template.category,
+    categoryLabel: category?.label || template.category,
+    prompt: template.prompt_body,
+    answers: {},
+    quality,
+    datetime: new Date().toISOString(),
+  };
+
+  currentSavedId = null;
+  state.savedPromptId = null;
+  state.categoryId = template.category;
+
+  renderResult(item);
+  showView("result");
 }
 
 /** ライブラリから開く */
@@ -129,6 +153,11 @@ function renderList(container, items, className) {
 }
 
 function updateFavoriteButton(savedId) {
+  if (!savedId) {
+    DOM.btnFavorite.hidden = true;
+    return;
+  }
+  DOM.btnFavorite.hidden = false;
   const fav = isFavorite(savedId);
   DOM.btnFavorite.textContent = fav ? "★ お気に入り済み" : "☆ お気に入りに追加";
   DOM.btnFavorite.classList.toggle("btn--favorited", fav);
@@ -141,9 +170,9 @@ export async function copyPrompt() {
   showToast("クリップボードにコピーしました");
 }
 
-export function handleFavoriteToggle() {
+export async function handleFavoriteToggle() {
   if (!currentSavedId) return;
-  const nowFav = toggleFavorite(currentSavedId);
+  const nowFav = await toggleFavorite(currentSavedId);
   updateFavoriteButton(currentSavedId);
   showToast(nowFav ? "お気に入りに追加しました" : "お気に入りを解除しました");
 }

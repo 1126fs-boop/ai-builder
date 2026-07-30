@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="description" content="美容 BtoB メーカー営業専用 AI Builder v1.0 — ソリューション営業プロンプト生成">
+  <meta name="description" content="株式会社ワム 営業チーム向け AI Builder — ソリューション営業プロンプト生成">
   <meta name="theme-color" content="#2563eb">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="AI Builder">
   <meta name="format-detection" content="telephone=no">
-  <title>AI Builder v1.0</title>
+  <title>AI Builder — 株式会社ワム</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
@@ -20,11 +20,19 @@
 
   <div id="app" class="app">
 
+    <header class="app-bar" id="app-bar">
+      <span class="app-bar__user" id="app-bar-user"></span>
+      <div class="app-bar__actions">
+        <a href="/admin" id="app-bar-admin" class="app-bar__link" hidden>管理</a>
+        <button type="button" id="btn-logout" class="app-bar__link app-bar__btn">ログアウト</button>
+      </div>
+    </header>
+
     <!-- ===== ホーム / AIライブラリ ===== -->
     <section id="view-home" class="view view--active" aria-label="ホーム">
 
       <header class="hero">
-        <div class="hero__badge">v1.0 · 美容 BtoB 営業</div>
+        <div class="hero__badge">v2.0 · 株式会社ワム 営業チーム</div>
         <h1 class="hero__title">AI Builder</h1>
         <p class="hero__subtitle">質問に答えるだけ。お客様の経営課題を解決する AI プロンプトを、毎日の営業で。</p>
       </header>
@@ -37,6 +45,13 @@
       <button id="btn-new-ai" class="btn btn--primary btn--full btn-new-ai" type="button">
         <span class="btn-new-ai__plus">＋</span> 新しい AI を作る
       </button>
+
+      <!-- 共通テンプレート -->
+      <section class="home-section" id="section-templates">
+        <h2 class="home-section__title">共通テンプレート</h2>
+        <p class="home-section__desc">全営業メンバーで共有されるテンプレートです。タップしてすぐ使えます。</p>
+        <div id="templates-list" class="list-group"></div>
+      </section>
 
       <!-- AIライブラリ -->
       <section class="home-section home-section--library">

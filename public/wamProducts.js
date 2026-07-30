@@ -179,12 +179,61 @@ export const WAM_PRODUCTS = [
 /** 商品を使わない画像生成モード */
 export const NO_PRODUCT_OPTION = "商品なし（背景・人物・装飾・文字のみ）";
 
-const productMap = new Map(WAM_PRODUCTS.map((p) => [p.id, p]));
-const nameMap = new Map(WAM_PRODUCTS.map((p) => [p.name, p]));
+/** @type {WamProduct[]} */
+let _products = [...WAM_PRODUCTS];
+let productMap = new Map(_products.map((p) => [p.id, p]));
+let nameMap = new Map(_products.map((p) => [p.name, p]));
+
+function rebuildMaps(products) {
+  _products = products;
+  productMap = new Map(products.map((p) => [p.id, p]));
+  nameMap = new Map(products.map((p) => [p.name, p]));
+}
+
+function rowToProduct(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category || "",
+    description: row.description || "",
+    officialUrl: row.official_url || "",
+    officialImageUrl: row.official_image_url || null,
+    hasOfficialImage: Boolean(row.has_official_image),
+  };
+}
+
+/** Supabase から商品マスタを読み込む（失敗時は静的データ） */
+export async function initProducts() {
+  try {
+    const res = await fetch("/api/config");
+    if (!res.ok) return;
+    const { supabaseUrl, supabaseAnonKey } = await res.json();
+    if (!supabaseUrl) return;
+
+    const { createBrowserClient } = await import("https://esm.sh/@supabase/ssr@0.5.2");
+    const sb = createBrowserClient(supabaseUrl, supabaseAnonKey);
+    const { data } = await sb
+      .from("products")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order");
+
+    if (data?.length) {
+      rebuildMaps(data.map(rowToProduct));
+    }
+  } catch {
+    /* 静的 WAM_PRODUCTS を使用 */
+  }
+}
+
+/** @returns {WamProduct[]} */
+export function getActiveProducts() {
+  return _products;
+}
 
 /** @returns {string[]} 質問選択肢用 */
 export function getProductChoiceOptions() {
-  return [...WAM_PRODUCTS.map((p) => p.name), NO_PRODUCT_OPTION];
+  return [..._products.map((p) => p.name), NO_PRODUCT_OPTION];
 }
 
 /** @param {string} id @returns {WamProduct|undefined} */

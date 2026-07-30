@@ -1,9 +1,9 @@
-# AI Builder — ローカル開発サーバー
-# ES Modules を使うため、file:// ではなく HTTP で開いてください。
+# AI Builder — ローカル開発サーバー（静的ファイルのみ）
+# フル機能（ログイン・クラウド保存）は `npm run dev` を使用してください。
 
 param(
   [int]$Port = 8080,
-  [string]$Root = $PSScriptRoot
+  [string]$Root = (Join-Path $PSScriptRoot "public")
 )
 
 $prefix = "http://127.0.0.1:$Port/"
@@ -12,8 +12,9 @@ $listener.Prefixes.Add($prefix)
 $listener.Start()
 
 Write-Host ""
-Write-Host "  AI Builder dev server" -ForegroundColor Cyan
+Write-Host "  AI Builder static dev server" -ForegroundColor Cyan
 Write-Host "  $prefix" -ForegroundColor Green
+Write-Host "  ログイン・クラウド保存は npm run dev を使用" -ForegroundColor DarkGray
 Write-Host "  Ctrl+C で停止" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -25,6 +26,7 @@ $mimes = @{
   ".svg"  = "image/svg+xml"
   ".png"  = "image/png"
   ".ico"  = "image/x-icon"
+  ".webmanifest" = "application/manifest+json; charset=utf-8"
 }
 
 try {

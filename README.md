@@ -1,189 +1,138 @@
-# AI Builder v1.0
+# AI Builder v2.0
 
-美容機器・美容商材メーカーの **BtoB 営業担当者** 向けプロンプト生成アプリ。  
-PC・iPhone・Android 対応。PWA としてホーム画面に追加できます。
+**株式会社ワム** 営業メンバー全員向けの Web アプリ。  
+美容 BtoB メーカーのソリューション営業プロンプトを、質問に答えるだけで生成できます。
 
 ## 主な機能
 
 | 機能 | 説明 |
 |---|---|
-| **AI 作成ウィザード** | カテゴリ別質問フロー。選択肢タップで自動進行 |
-| **AI 保存** | 生成したプロンプトを LocalStorage に自動保存 |
+| **ログイン** | Supabase Auth によるメール/パスワード認証 |
+| **ユーザーごとの保存** | 生成した AI プロンプトをクラウドに保存（端末をまたいで利用可能） |
+| **共通テンプレート** | 全営業メンバーで共有。管理者が登録・更新 |
+| **管理者パネル** | テンプレート・商品情報の CRUD（`/admin`） |
+| **AI 作成ウィザード** | カテゴリ別質問フロー |
 | **AI ライブラリ** | 保存一覧・検索・お気に入り・削除 |
-| **プロンプト品質診断** | 4 軸スコア（ソリューション適合度 / 具体性 / 実用性 / BtoB 文脈） |
-| **AI 評価システム** | S〜D グレード・強み / 不足情報・推奨 AI を表示 |
-| **PWA** | スマホのホーム画面に追加してアプリのように利用 |
+| **品質診断 & AI 評価** | 4 軸スコア・S〜D グレード |
+| **PWA** | PC・スマホ対応。ホーム画面に追加可能 |
 
 ## 技術スタック
 
-- HTML / CSS / JavaScript（フレームワークなし）
-- ES Modules + LocalStorage
-- PWA（Service Worker + Web App Manifest）
-- Vercel / Netlify 静的ホスティング（HTTPS 自動付与）
+| レイヤ | 技術 |
+|---|---|
+| フロント（メインアプリ） | HTML / CSS / JavaScript（ES Modules） |
+| フロント（認証・管理） | Next.js 14 App Router |
+| バックエンド / DB | Supabase（Auth + PostgreSQL + RLS） |
+| ホスティング | Vercel |
+| PWA | Service Worker + Web App Manifest |
 
 ---
 
-## スマートフォンでの使い方（PWA）
+## セットアップ
+
+### 1. Supabase プロジェクト作成
+
+1. [Supabase](https://supabase.com) でプロジェクトを作成
+2. **SQL Editor** で `supabase/migrations/001_enterprise.sql` を実行
+3. **Authentication → Users** で営業メンバーのアカウントを作成
+4. 最初の管理者は SQL でロールを付与:
+
+```sql
+update public.profiles set role = 'admin' where email = 'admin@wamu-gr.co.jp';
+```
+
+### 2. 環境変数
+
+`.env.local` を作成（`.env.example` を参照）:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+### 3. ローカル開発
+
+```bash
+npm install
+npm run dev
+```
+
+http://localhost:3000 で起動。ログイン後 `/index.html` にリダイレクトされます。
+
+**静的ファイルのみ**（ログインなし・LocalStorage モード）を試す場合:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\serve.ps1
+```
+
+---
+
+## Vercel へのデプロイ
+
+1. GitHub リポジトリ `https://github.com/1126fs-boop/ai-builder` を Vercel に接続
+2. **Framework Preset**: Next.js（自動検出）
+3. **Environment Variables** に以下を設定:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_APP_URL`（本番 URL）
+4. デプロイ
+
+Supabase の **Authentication → URL Configuration** に本番 URL を追加:
+
+- Site URL: `https://your-app.vercel.app`
+- Redirect URLs: `https://your-app.vercel.app/auth/callback`
+
+---
+
+## ユーザー管理
+
+| ロール | 権限 |
+|---|---|
+| `member` | アプリ利用・自分の AI 保存・共通テンプレート閲覧 |
+| `admin` | 上記 + `/admin` でテンプレート・商品情報の管理 |
+
+新規ユーザーは Supabase Dashboard または Admin API で作成。初回ログイン時に `profiles` テーブルへ自動登録されます。
+
+---
+
+## スマートフォン（PWA）
 
 デプロイ済みの **HTTPS URL** をスマホのブラウザで開き、ホーム画面に追加します。
 
 ### iPhone（Safari）
 
 1. Safari でアプリの URL を開く
-2. 共有ボタン（□↑）→ **ホーム画面に追加**
-3. 「追加」をタップ
+2. 共有ボタン → **ホーム画面に追加**
 
 ### Android（Chrome）
 
 1. Chrome でアプリの URL を開く
-2. メニュー（⋮）→ **ホーム画面に追加** または **アプリをインストール**
-3. 指示に従って追加
+2. メニュー → **ホーム画面に追加** または **アプリをインストール**
 
 ---
 
-## ローカル開発
-
-ES Modules を使用するため、`file://` ではなく **HTTP サーバー** 経由で開いてください。
-
-### PowerShell（Windows）
-
-```powershell
-cd C:\Users\user\ai-builder
-powershell -ExecutionPolicy Bypass -File .\serve.ps1
-```
-
-ブラウザで http://localhost:8080/ を開きます。
-
-### VS Code / Cursor（Live Server）
-
-1. [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) をインストール
-2. `index.html` を右クリック → **Open with Live Server**
-
-### Node.js
-
-```bash
-npx serve .
-```
-
----
-
-## 本番デプロイ（HTTPS）
-
-静的サイトのため **ビルド不要**。リポジトリを Vercel または Netlify に接続するだけで公開できます。
-
-### 前提
-
-- GitHub リポジトリ: `https://github.com/1126fs-boop/ai-builder`
-- 公開ブランチ: `cursor/ai-builder-web-app`（または `main`）
-
----
-
-### Vercel へのデプロイ
-
-1. [Vercel](https://vercel.com/) にログイン
-2. **Add New → Project**
-3. GitHub リポジトリ `ai-builder` を Import
-4. 設定（通常はデフォルトのまま）:
-   - **Framework Preset:** Other
-   - **Root Directory:** `./`
-   - **Build Command:** （空欄）
-   - **Output Directory:** `./`
-5. **Deploy** をクリック
-6. 完了後、`https://your-project.vercel.app` の URL が発行されます
-
-#### CLI からデプロイする場合
-
-```bash
-npm i -g vercel
-cd ai-builder
-vercel
-```
-
-初回はログインとプロジェクト設定を行い、以降 `vercel --prod` で本番デプロイします。
-
-`vercel.json` により Service Worker と Manifest のヘッダーが設定されます。
-
----
-
-### Netlify へのデプロイ
-
-1. [Netlify](https://www.netlify.com/) にログイン
-2. **Add new site → Import an existing project**
-3. GitHub リポジトリ `ai-builder` を接続
-4. 設定:
-   - **Branch to deploy:** `cursor/ai-builder-web-app`
-   - **Build command:** （空欄）
-   - **Publish directory:** `.`（ルート）
-5. **Deploy site** をクリック
-6. 完了後、`https://random-name.netlify.app` の URL が発行されます
-
-#### CLI からデプロイする場合
-
-```bash
-npm i -g netlify-cli
-cd ai-builder
-netlify login
-netlify init
-netlify deploy --prod
-```
-
-`netlify.toml` によりヘッダーと公開設定が適用されます。
-
----
-
-### デプロイ後の確認チェックリスト
-
-- [ ] HTTPS URL でアプリが表示される
-- [ ] 「＋ 新しい AI を作る」→ ウィザードに遷移する
-- [ ] スマホでボタン・入力欄がタップしやすい
-- [ ] iPhone / Android で「ホーム画面に追加」が表示される
-- [ ] オフライン時もキャッシュ済み画面が表示される（PWA）
-
----
-
-## プロジェクト構成
+## ディレクトリ構成
 
 ```
 ai-builder/
-├── index.html
-├── style.css
-├── manifest.webmanifest   # PWA マニフェスト
-├── sw.js                  # Service Worker
-├── vercel.json            # Vercel 設定
-├── netlify.toml           # Netlify 設定
-├── serve.ps1              # ローカル開発サーバー
-├── icons/
-│   ├── icon.svg
-│   ├── icon-192.png
-│   └── icon-512.png
-├── context.js
-├── categories.js
-├── questions.js
-├── promptBuilder.js
-├── qualityEngine.js
-├── wamProducts.js
-├── wamImageContext.js
-└── js/
-    ├── app.js
-    ├── pwa.js             # Service Worker 登録
-    ├── state.js
-    ├── ui.js
-    ├── storage.js
-    ├── homeView.js
-    ├── questionView.js
-    └── resultView.js
+├── app/                  # Next.js（ログイン・管理・API）
+│   ├── login/
+│   ├── admin/
+│   └── api/config/
+├── public/               # メインアプリ（静的 ES Modules）
+│   ├── index.html
+│   ├── js/
+│   └── icons/
+├── lib/supabase/         # Supabase クライアント
+├── supabase/migrations/  # DB スキーマ
+└── docs/                 # 設計ドキュメント
 ```
 
-## カテゴリ
+詳細なアーキテクチャは `docs/enterprise-architecture.md` を参照してください。
 
-営業 / 提案書 / メルマガ / 研修 / SNS / 販促・POP / エージェント / 分析 / その他
-
-## 設計方針
-
-- **ソリューション営業**: 取引先の経営課題解決を起点にプロンプトを設計
-- **マルチデバイス**: レスポンシブ + タッチ操作最適化 + PWA
-- **HTTPS 必須**: Service Worker / ホーム画面追加は HTTPS 環境でのみ有効
+---
 
 ## ライセンス
 
-Private — 1126fs-boop/ai-builder
+株式会社ワム 内部利用

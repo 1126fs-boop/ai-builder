@@ -3,7 +3,7 @@
  * 静的アセットをキャッシュし、オフライン閲覧をサポート
  */
 
-const CACHE_NAME = "aibuilder-pwa-v1";
+const CACHE_NAME = "aibuilder-pwa-v2";
 
 const PRECACHE = [
   "/",
@@ -25,6 +25,9 @@ const PRECACHE = [
   "/js/state.js",
   "/js/ui.js",
   "/js/storage.js",
+  "/js/supabaseClient.js",
+  "/js/authBar.js",
+  "/js/templates.js",
   "/js/homeView.js",
   "/js/questionView.js",
   "/js/resultView.js",

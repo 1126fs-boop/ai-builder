@@ -3,6 +3,8 @@
  */
 
 export const DOM = {
+  appBar: document.getElementById("app-bar"),
+  templatesList: document.getElementById("templates-list"),
   viewHome: document.getElementById("view-home"),
   viewQuestions: document.getElementById("view-questions"),
   viewResult: document.getElementById("view-result"),

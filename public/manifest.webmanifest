@@ -1,8 +1,8 @@
 {
-  "name": "AI Builder — 美容 BtoB 営業",
+  "name": "AI Builder — 株式会社ワム",
   "short_name": "AI Builder",
-  "description": "美容 BtoB メーカー営業向けプロンプト生成アプリ",
-  "start_url": "/",
+  "description": "株式会社ワム 営業チーム向けプロンプト生成アプリ",
+  "start_url": "/index.html",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

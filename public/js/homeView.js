@@ -1,5 +1,5 @@
 /**
- * AI Builder v1.0 — ホーム & AIライブラリ
+ * AI Builder v2.0 — ホーム & AIライブラリ
  */
 
 import { getAllCategories, getPopularCategories, getCategory, searchCategories } from "../categories.js";
@@ -10,24 +10,32 @@ import {
   toggleFavorite,
   deleteAI,
   formatDate,
-  migrateStorage,
 } from "./storage.js";
+import { loadTemplates, renderTemplatesList } from "./templates.js";
 import { state } from "./state.js";
 import { DOM, renderEmpty, esc } from "./ui.js";
 
 let onStartCategory = () => {};
 let onOpenSaved = () => {};
+let onOpenTemplate = () => {};
 
 export function initHomeView(handlers) {
   onStartCategory = handlers.onStartCategory;
   onOpenSaved = handlers.onOpenSaved;
-  migrateStorage();
+  onOpenTemplate = handlers.onOpenTemplate || (() => {});
 }
 
-export function renderHome() {
+export async function renderHome() {
+  await loadTemplates();
+  renderTemplates();
   renderLibrary();
   renderPopular();
   renderAllCategories();
+}
+
+function renderTemplates() {
+  if (!DOM.templatesList) return;
+  renderTemplatesList(DOM.templatesList, (t) => onOpenTemplate(t));
 }
 
 /* ── AIライブラリ ── */
@@ -85,16 +93,16 @@ function createLibraryItem(item, index) {
 
   el.querySelector(".library-item__main").addEventListener("click", () => onOpenSaved(item.id));
 
-  el.querySelector("[data-fav]").addEventListener("click", (e) => {
+  el.querySelector("[data-fav]").addEventListener("click", async (e) => {
     e.stopPropagation();
-    toggleFavorite(item.id);
+    await toggleFavorite(item.id);
     renderLibrary();
   });
 
-  el.querySelector("[data-del]").addEventListener("click", (e) => {
+  el.querySelector("[data-del]").addEventListener("click", async (e) => {
     e.stopPropagation();
     if (confirm(`「${item.title}」を削除しますか？`)) {
-      deleteAI(item.id);
+      await deleteAI(item.id);
       renderLibrary();
     }
   });

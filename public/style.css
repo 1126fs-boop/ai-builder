@@ -814,3 +814,113 @@ body {
     border-top: none;
   }
 }
+
+/* ── v2.0 ユーザーバー ── */
+.app-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0 16px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.app-bar__user {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.app-bar__link {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.app-bar__btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.app-bar__link:hover {
+  background: var(--color-accent-light);
+}
+
+.home-section__desc {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  margin: -8px 0 12px;
+}
+
+.template-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  animation: fadeUp 0.35s ease both;
+}
+
+.template-item:hover {
+  border-color: var(--color-accent);
+  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.08);
+}
+
+.template-item__icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.template-item__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.template-item__title {
+  display: block;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.template-item__meta {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.template-item__arrow {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.templates-empty {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  padding: 16px;
+  text-align: center;
+  background: var(--color-bg-subtle);
+  border-radius: 12px;
+}

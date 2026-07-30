@@ -1,5 +1,5 @@
 /**
- * AI Builder v1.0 — エントリポイント
+ * AI Builder v2.0 — エントリポイント
  */
 
 import { resetAll } from "./state.js";
@@ -10,12 +10,16 @@ import {
   initResultView,
   showGeneratedResult,
   openSavedResult,
+  openTemplateResult,
   copyPrompt,
   handleFavoriteToggle,
   restartCategory,
   goHomeFromResult,
 } from "./resultView.js";
 import { registerServiceWorker } from "./pwa.js";
+import { initStorage } from "./storage.js";
+import { initAuthBar } from "./authBar.js";
+import { initProducts } from "../wamProducts.js";
 
 function goHome() {
   resetAll();
@@ -23,10 +27,14 @@ function goHome() {
   showView("home");
 }
 
-function init() {
+async function init() {
+  await Promise.all([initStorage(), initProducts()]);
+  await initAuthBar();
+
   initHomeView({
     onStartCategory: startCategory,
     onOpenSaved: openSavedResult,
+    onOpenTemplate: openTemplateResult,
   });
 
   initQuestionView({
@@ -36,7 +44,7 @@ function init() {
 
   initResultView({ onGoHome: goHome });
 
-  renderHome();
+  await renderHome();
 
   DOM.searchInput?.addEventListener("input", (e) => handleSearchInput(e.target.value));
   DOM.btnNewAi?.addEventListener("click", handleNewAiClick);
