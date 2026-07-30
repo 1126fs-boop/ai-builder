@@ -3,57 +3,66 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="質問に答えるだけで最高品質のプロンプトを生成 — AI Builder">
-  <title>AI Builder</title>
+  <meta name="description" content="質問に答えるだけで最高品質のプロンプトを生成 — AI Builder v0.2">
+  <title>AI Builder v0.2</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- ===== メインアプリコンテナ ===== -->
   <div id="app" class="app">
 
     <!-- ===== ホーム画面 ===== -->
     <section id="view-home" class="view view--active" aria-label="ホーム">
       <header class="hero">
-        <div class="hero__badge">Prompt Generator</div>
+        <div class="hero__badge">v0.2 · Prompt Generator</div>
         <h1 class="hero__title">AI Builder</h1>
         <p class="hero__subtitle">質問に答えるだけで最高品質のプロンプトを生成</p>
       </header>
 
-      <div id="category-grid" class="category-grid" role="list">
-        <!-- script.js がカードを動的生成 -->
-      </div>
+      <div id="category-grid" class="category-grid" role="list"></div>
     </section>
 
     <!-- ===== 質問画面 ===== -->
     <section id="view-questions" class="view" aria-label="質問" hidden>
-      <header class="question-header">
-        <button id="btn-back-home" class="btn-icon" type="button" aria-label="ホームに戻る">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
+
+      <!-- 画面上部: ホーム + 進捗 -->
+      <header class="top-bar">
+        <button id="btn-top-home" class="top-bar__home" type="button">
+          <span aria-hidden="true">🏠</span> ホーム
         </button>
-        <span id="question-category-label" class="question-header__label"></span>
+        <div class="top-bar__progress-info">
+          <span id="progress-label" class="top-bar__label">質問 1 / 8</span>
+          <div id="progress-segments" class="progress-segments" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+            <!-- script.js がセグメントを生成 -->
+          </div>
+        </div>
       </header>
 
-      <!-- 進捗バー -->
-      <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-        <div id="progress-bar" class="progress__bar"></div>
-      </div>
-      <p id="progress-text" class="progress__text"></p>
-
-      <!-- 質問カード -->
-      <div class="question-card">
+      <!-- 質問カード（1問ずつ表示） -->
+      <div id="question-card" class="question-card">
+        <span id="question-number" class="question-card__number"></span>
         <h2 id="question-text" class="question-card__title"></h2>
-        <div id="options-container" class="options" role="listbox">
-          <!-- 選択肢ボタンを動的生成 -->
+        <div id="options-container" class="options"></div>
+        <div id="text-input-area" class="text-input-area" hidden>
+          <textarea
+            id="text-input"
+            class="text-input"
+            rows="4"
+            placeholder="自由に入力してください"
+          ></textarea>
         </div>
       </div>
 
       <!-- ナビゲーション -->
       <nav class="question-nav">
-        <button id="btn-prev" class="btn btn--secondary" type="button" disabled>戻る</button>
-        <button id="btn-next" class="btn btn--primary" type="button" disabled>次へ</button>
+        <button id="btn-prev" class="btn btn--secondary" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          戻る
+        </button>
+        <button id="btn-next" class="btn btn--primary" type="button" disabled>
+          次へ
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
       </nav>
     </section>
 
@@ -65,10 +74,25 @@
         <p id="result-category-label" class="result-header__subtitle"></p>
       </header>
 
+      <!-- 完成プロンプト -->
       <div class="result-card">
         <pre id="prompt-output" class="result-card__prompt"></pre>
       </div>
 
+      <!-- 品質チェック（ダミー） -->
+      <div id="quality-check" class="quality-card">
+        <div class="quality-card__stars" id="quality-stars" aria-label="品質評価"></div>
+        <div class="quality-card__score">
+          <span class="quality-card__score-label">品質スコア</span>
+          <span id="quality-score" class="quality-card__score-value"></span>
+        </div>
+        <div class="quality-card__missing">
+          <p class="quality-card__missing-title">不足している情報</p>
+          <ul id="quality-missing-list" class="quality-card__missing-list"></ul>
+        </div>
+      </div>
+
+      <!-- アクションボタン（3つ） -->
       <div class="result-actions">
         <button id="btn-copy" class="btn btn--primary btn--full" type="button">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -78,6 +102,7 @@
           <span id="btn-copy-label">コピー</span>
         </button>
         <button id="btn-restart" class="btn btn--secondary btn--full" type="button">最初から</button>
+        <button id="btn-home" class="btn btn--ghost btn--full" type="button">ホームへ戻る</button>
       </div>
     </section>
 
@@ -86,6 +111,8 @@
   <!-- トースト通知 -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+  <!-- データ → ロジック の順で読み込み -->
+  <script src="questions.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
