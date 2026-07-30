@@ -10,11 +10,13 @@
 
 | 変数名 | 用途 | 公開してよい？ |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_PROJECT_REF` | プロジェクト識別子（Settings → General） | ✅ はい |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project URL | ✅ はい |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Publishable key（`sb_publishable_...`） | ✅ はい |
-| `NEXT_PUBLIC_APP_URL` | アプリの URL（任意） | ✅ はい |
+| `NEXT_PUBLIC_APP_URL` | 本番アプリ URL（Supabase Site URL と一致） | ✅ はい |
 
-`NEXT_PUBLIC_SUPABASE_URL` は **自動生成** されます（`https://{Reference ID}.supabase.co`）。
+`NEXT_PUBLIC_SUPABASE_PROJECT_REF` だけ設定しても URL は自動生成されますが、**Vercel では `NEXT_PUBLIC_SUPABASE_URL` を明示設定するのが確実**です。
+
+設定確認 API: デプロイ後に `https://あなたのアプリ.vercel.app/api/auth/check-config` を開くと、不足している変数と Supabase に登録すべき URL が表示されます。
 
 ---
 
@@ -83,12 +85,21 @@ SUPABASE_ACCESS_TOKEN=your-access-token
 | Enable sign ups | ON |
 | Confirm email | **OFF**（すぐ使えるように） |
 
-**Authentication → URL Configuration** に Redirect URL を追加:
+**Authentication → URL Configuration**:
+
+| 項目 | 値 |
+|---|---|
+| **Site URL** | `NEXT_PUBLIC_APP_URL` と同じ（例: `https://ai-builder-xxxx.vercel.app`） |
+| **Redirect URLs** | 下記をすべて追加 |
 
 ```
 http://localhost:3000/auth/callback
+http://localhost:3000/login
 https://あなたのアプリ.vercel.app/auth/callback
+https://あなたのアプリ.vercel.app/login
 ```
+
+※ 実際の値は `/api/auth/check-config` の `supabaseAuth` を参照してください。
 
 ---
 
@@ -98,11 +109,11 @@ https://あなたのアプリ.vercel.app/auth/callback
 
 | Name | Value |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_PROJECT_REF` | Reference ID |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Publishable key |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://【Reference ID】.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Publishable key（`sb_publishable_...`） |
 | `NEXT_PUBLIC_APP_URL` | `https://あなたのアプリ.vercel.app` |
 
-設定後 **Redeploy**。
+設定後 **Redeploy**（環境変数はビルド時に埋め込まれるため必須）。
 
 ---
 
@@ -110,7 +121,8 @@ https://あなたのアプリ.vercel.app/auth/callback
 
 | 症状 | 対処 |
 |---|---|
+| 「読み込み中…」のまま止まる | Vercel の 3 環境変数を設定 → **Redeploy**。`/api/auth/check-config` で確認 |
 | ログインできない | Supabase で **Enable sign ups** が ON か確認 |
 | 環境変数エラー | `npm run check:env` → `npm run setup:env -- <Reference ID>` |
-| Project URL が分からない | Reference ID だけで OK（URL は自動生成） |
+| Project URL が分からない | Settings → API の Project URL、または Reference ID から `https://{ref}.supabase.co` |
 | 別端末で登録済み | 確認メールのリンクを1回クリック |

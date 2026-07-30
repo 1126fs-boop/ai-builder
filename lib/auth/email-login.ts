@@ -8,6 +8,7 @@ import {
   saveDevicePassword,
 } from "@/lib/auth/device-auth";
 
+import { getAuthCallbackUrl } from "@/lib/supabase/app-url";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 /** 端末に保存されたメールアドレスを取得 */
@@ -46,12 +47,11 @@ export type LoginResult =
 /** 登録済みメールの別端末ログイン — 確認メールを送信 */
 async function sendRecoveryOtp(email: string): Promise<LoginResult> {
   const supabase = createClient();
-  const origin = window.location.origin;
   const { error: otpError } = await supabase.auth.signInWithOtp({
     email,
     options: {
       shouldCreateUser: false,
-      emailRedirectTo: `${origin}/auth/callback?next=/index.html`,
+      emailRedirectTo: getAuthCallbackUrl("/index.html"),
     },
   });
 

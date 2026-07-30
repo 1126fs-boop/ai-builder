@@ -3,10 +3,15 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
+import { withTimeout } from "@/lib/auth/async-utils";
 import { validateEmail } from "@/lib/auth/validation";
 import { loginWithEmail, getSavedEmail } from "@/lib/auth/email-login";
+import { mapAuthError } from "@/lib/auth/errors";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import AuthShell from "./AuthShell";
 import "./auth-form.css";
+
+const AUTH_TIMEOUT_MS = 12_000;
 
 export default function LoginForm() {
   const router = useRouter();
@@ -22,34 +27,60 @@ export default function LoginForm() {
   const [fieldError, setFieldError] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
+
     async function tryAutoLogin() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      try {
+        if (!isSupabaseConfigured()) {
+          setError(
+            "Supabase が未設定です。Vercel の環境変数（NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY / NEXT_PUBLIC_APP_URL）を確認し、再デプロイしてください。"
+          );
+          return;
+        }
 
-      if (user) {
-        router.replace(redirect);
-        router.refresh();
-        return;
-      }
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await withTimeout(
+          supabase.auth.getUser(),
+          AUTH_TIMEOUT_MS,
+          "Supabase への接続がタイムアウトしました。URL または anon キーを確認してください。"
+        );
 
-      const saved = getSavedEmail();
-      if (saved) {
-        setLoading(true);
-        const result = await loginWithEmail(saved);
-        if (result.ok) {
+        if (user) {
           router.replace(redirect);
           router.refresh();
           return;
         }
-        setError(result.error);
-        if (result.pendingEmail) setSuccess(result.error);
-        setLoading(false);
-      }
 
-      setChecking(false);
+        const saved = getSavedEmail();
+        if (saved) {
+          setLoading(true);
+          const result = await withTimeout(
+            loginWithEmail(saved),
+            AUTH_TIMEOUT_MS,
+            "ログイン処理がタイムアウトしました。Supabase の設定を確認してください。"
+          );
+          if (result.ok) {
+            router.replace(redirect);
+            router.refresh();
+            return;
+          }
+          setError(result.error);
+          if (result.pendingEmail) setSuccess(result.error);
+          setLoading(false);
+        }
+      } catch (err) {
+        setError(mapAuthError(err instanceof Error ? err : null));
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
     }
 
     tryAutoLogin();
+    return () => {
+      cancelled = true;
+    };
   }, [redirect, router]);
 
   async function handleSubmit(e: React.FormEvent) {
