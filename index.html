@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="質問に答えるだけで最高品質のプロンプトを生成 — AI Builder v0.2">
-  <title>AI Builder v0.2</title>
+  <meta name="description" content="美容業界 BtoB メーカー営業専用 — ソリューション営業 AI Builder">
+  <title>AI Builder — 美容 BtoB 営業</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,47 +13,80 @@
 
     <!-- ===== ホーム画面 ===== -->
     <section id="view-home" class="view view--active" aria-label="ホーム">
+
       <header class="hero">
-        <div class="hero__badge">v0.2 · Prompt Generator</div>
+        <div class="hero__badge">美容 BtoB · ソリューション営業</div>
         <h1 class="hero__title">AI Builder</h1>
-        <p class="hero__subtitle">質問に答えるだけで最高品質のプロンプトを生成</p>
+        <p class="hero__subtitle">美容機器・商材メーカー営業向け — 質問に答えるだけで、お客様の経営課題を解決する AI プロンプトを生成</p>
       </header>
 
-      <div id="category-grid" class="category-grid" role="list"></div>
+      <!-- 検索バー -->
+      <div class="search-bar">
+        <svg class="search-bar__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input
+          id="search-input"
+          class="search-bar__input"
+          type="search"
+          placeholder="営業・提案書・メルマガなどを検索..."
+          autocomplete="off"
+        >
+      </div>
+
+      <!-- 新しいAIを作る -->
+      <button id="btn-new-ai" class="btn btn--primary btn--full btn-new-ai" type="button">
+        <span class="btn-new-ai__plus">＋</span> 新しいAIを作る
+      </button>
+
+      <!-- 最近使ったAI -->
+      <section class="home-section">
+        <h2 class="home-section__title">最近使ったAI</h2>
+        <div id="recent-list" class="list-group"></div>
+      </section>
+
+      <!-- 人気カテゴリ -->
+      <section class="home-section">
+        <h2 class="home-section__title">人気カテゴリ</h2>
+        <div id="popular-grid" class="category-grid category-grid--compact"></div>
+      </section>
+
+      <!-- お気に入り -->
+      <section class="home-section">
+        <h2 class="home-section__title">お気に入り</h2>
+        <div id="favorites-list" class="list-group"></div>
+      </section>
+
+      <!-- 全カテゴリ -->
+      <section id="section-all-categories" class="home-section">
+        <h2 class="home-section__title">すべてのカテゴリ</h2>
+        <div id="all-categories-grid" class="category-grid"></div>
+      </section>
+
     </section>
 
     <!-- ===== 質問画面 ===== -->
     <section id="view-questions" class="view" aria-label="質問" hidden>
 
-      <!-- 画面上部: ホーム + 進捗 -->
       <header class="top-bar">
         <button id="btn-top-home" class="top-bar__home" type="button">
           <span aria-hidden="true">🏠</span> ホーム
         </button>
         <div class="top-bar__progress-info">
           <span id="progress-label" class="top-bar__label">質問 1 / 8</span>
-          <div id="progress-segments" class="progress-segments" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-            <!-- script.js がセグメントを生成 -->
-          </div>
+          <div id="progress-segments" class="progress-segments" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
         </div>
       </header>
 
-      <!-- 質問カード（1問ずつ表示） -->
       <div id="question-card" class="question-card">
         <span id="question-number" class="question-card__number"></span>
         <h2 id="question-text" class="question-card__title"></h2>
         <div id="options-container" class="options"></div>
         <div id="text-input-area" class="text-input-area" hidden>
-          <textarea
-            id="text-input"
-            class="text-input"
-            rows="4"
-            placeholder="自由に入力してください"
-          ></textarea>
+          <textarea id="text-input" class="text-input" rows="4" placeholder="自由に入力してください"></textarea>
         </div>
       </div>
 
-      <!-- ナビゲーション -->
       <nav class="question-nav">
         <button id="btn-prev" class="btn btn--secondary" type="button">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -74,12 +107,10 @@
         <p id="result-category-label" class="result-header__subtitle"></p>
       </header>
 
-      <!-- 完成プロンプト -->
       <div class="result-card">
         <pre id="prompt-output" class="result-card__prompt"></pre>
       </div>
 
-      <!-- 品質チェック（ダミー） -->
       <div id="quality-check" class="quality-card">
         <div class="quality-card__stars" id="quality-stars" aria-label="品質評価"></div>
         <div class="quality-card__score">
@@ -92,7 +123,6 @@
         </div>
       </div>
 
-      <!-- アクションボタン（3つ） -->
       <div class="result-actions">
         <button id="btn-copy" class="btn btn--primary btn--full" type="button">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -101,6 +131,7 @@
           </svg>
           <span id="btn-copy-label">コピー</span>
         </button>
+        <button id="btn-favorite" class="btn btn--ghost btn--full" type="button">☆ お気に入りに追加</button>
         <button id="btn-restart" class="btn btn--secondary btn--full" type="button">最初から</button>
         <button id="btn-home" class="btn btn--ghost btn--full" type="button">ホームへ戻る</button>
       </div>
@@ -108,11 +139,8 @@
 
   </div>
 
-  <!-- トースト通知 -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <!-- データ → ロジック の順で読み込み -->
-  <script src="questions.js"></script>
-  <script src="script.js"></script>
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
