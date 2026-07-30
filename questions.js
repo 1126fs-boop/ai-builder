@@ -6,6 +6,7 @@
  */
 
 import { CLIENT_INDUSTRY_OPTIONS } from "./context.js";
+import { getProductChoiceOptions } from "./wamProducts.js";
 
 /** @typedef {"choice"|"choice_with_custom"|"text"} QuestionType */
 
@@ -266,8 +267,14 @@ export const QUESTIONS = {
     },
   ],
 
-  /* ── 販促・POP ── */
+  /* ── 販促・POP（公式HP参照: 画像生成のみ） ── */
   image: [
+    {
+      id: "wam_product",
+      text: "対象商品（株式会社ワム 公式HP）",
+      type: "choice",
+      options: getProductChoiceOptions(),
+    },
     {
       id: "usage",
       text: "用途",
@@ -292,10 +299,17 @@ export const QUESTIONS = {
     { id: "output_format", text: "出力形式", type: "choice", options: ["画像生成プロンプト（英語）", "コピー+構成案", "POP文案+レイアウト指示"] },
     { id: "aspect", text: "サイズ・比率", type: "choice", options: ["A4縦", "A3横", "1:1（SNS）", "9:16（ストーリー）"] },
     {
+      id: "product_image_upload",
+      text: "商品画像のアップロード",
+      type: "text",
+      placeholder: "例: dmk_package.jpg を Gemini / ChatGPT に添付済み（公式HPに画像がない商品は必須）",
+      optional: true,
+    },
+    {
       id: "extra_info",
       text: "追加情報",
       type: "text",
-      placeholder: "商品名、キャッチコピー案、ブランドカラーなど",
+      placeholder: "キャッチコピー案、配置イメージ、ブランドカラーなど",
       optional: true,
     },
   ],

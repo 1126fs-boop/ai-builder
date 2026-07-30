@@ -21,6 +21,8 @@ const QUESTION_HINTS = {
   tone: "取引先に合った文体",
   output_format: "ChatGPT に貼り付けた後の出力形式",
   extra_info: "取引先名・競合・予算感など。入力すると品質スコアが大幅アップ",
+  wam_product: "株式会社ワム公式HP（wamu-gr.co.jp/product/）掲載商品から選択。画像生成のみ公式HPを参照",
+  product_image_upload: "公式HPに商品画像がない商品は、正規パッケージ写真をAIツールにアップロードしてから記載",
 };
 
 export function initQuestionView(handlers) {

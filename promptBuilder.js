@@ -7,6 +7,12 @@
 
 import { wrapPrompt } from "./context.js";
 import { diagnoseQuality, formatStars } from "./qualityEngine.js";
+import {
+  WAM_IMAGE_GENERATION_RULES,
+  buildImageGenerationInstructions,
+  getImagePromptFooter,
+} from "./wamImageContext.js";
+import { resolveProductFromAnswers, NO_PRODUCT_OPTION } from "./wamProducts.js";
 
 /** 経営課題 → 訴求インパクトのマッピング */
 const CHALLENGE_IMPACT = {
@@ -188,14 +194,30 @@ const PROMPT_BUILDERS = {
   },
 
   image(answers) {
-    return wrapPrompt(structured({
-      role: `あなたは${answers.ai_role}。美容 BtoB 販促の専門家`,
-      mission: `${answers.usage}用の${answers.output_format}。「${answers.message}」を経営課題解決の視点で訴求`,
-      context: ctx(answers) + `\n- 掲示: ${answers.target}\n- スタイル: ${answers.style}`,
-      rules: [...BASE_RULES, "導入メリットが伝わるビジュアル・コピー"],
-      format: answers.output_format,
-      tone: "プロフェッショナル",
-    }));
+    const product = resolveProductFromAnswers(answers);
+    const productLabel = product?.name || NO_PRODUCT_OPTION;
+
+    const body = structured({
+      role: `あなたは${answers.ai_role}。株式会社ワム（https://wamu-gr.co.jp/）公式HPの商品情報に準拠した販促ビジュアル設計の専門家`,
+      mission: `${answers.usage}用の${answers.output_format}を作成。訴求: 「${answers.message}」。対象商品: ${productLabel}`,
+      context: buildImageGenerationInstructions(answers),
+      rules: [
+        ...BASE_RULES,
+        ...WAM_IMAGE_GENERATION_RULES,
+        "商品スペックの創作や架空パッケージの描写は禁止。公式HP記載内容のみ使用",
+        "出力に「商品画像をAI生成する」指示を含めてはならない",
+      ],
+      format:
+        answers.output_format === "画像生成プロンプト（英語）"
+          ? "①レイアウト構成（日本語）②背景・人物・装飾・文字の英語プロンプト ③公式商品画像の配置指示（加工禁止）またはアップロード依頼 ④コピー文案"
+          : answers.output_format,
+      tone: `${answers.style}。プロフェッショナル`,
+      example: product
+        ? "背景+人物+装飾+文字を生成 → 公式商品画像を指定位置に無加工で配置"
+        : "背景+人物+装飾+文字のみ（商品要素なし）",
+    });
+
+    return `${wrapPrompt(body)}\n\n${getImagePromptFooter()}`;
   },
 
   agent(answers) {
@@ -256,10 +278,12 @@ export function buildPrompt(categoryId, answers) {
  */
 export function generateTitle(categoryLabel, answers) {
   const parts = [categoryLabel];
-  if (answers.industry) parts.push(answers.industry);
+  if (answers.wam_product) parts.push(answers.wam_product);
+  else if (answers.industry) parts.push(answers.industry);
   if (answers.client_challenge) parts.push(answers.client_challenge);
   else if (answers.goal) parts.push(answers.goal);
   else if (answers.sales_type) parts.push(answers.sales_type);
+  else if (answers.usage) parts.push(answers.usage);
   return parts.join(" — ");
 }
 

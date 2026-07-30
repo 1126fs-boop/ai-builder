@@ -48,7 +48,7 @@ export const CATEGORIES = [
     id: "image",
     label: "販促・POP",
     icon: "🎨",
-    description: "POP・店内貼り・販促ビジュアル",
+    description: "POP・店内貼り・販促ビジュアル（公式HP商品参照）",
     popular: false,
   },
   {

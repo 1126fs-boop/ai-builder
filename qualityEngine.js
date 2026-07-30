@@ -6,6 +6,11 @@
  */
 
 import { getQuestions } from "./questions.js";
+import {
+  resolveProductFromAnswers,
+  getProductImageMode,
+  NO_PRODUCT_OPTION,
+} from "./wamProducts.js";
 
 /** @typedef {{ id: string, label: string, score: number, max: number }} Dimension */
 
@@ -61,7 +66,7 @@ export function diagnoseQuality(categoryId, answers) {
 
   const { grade, gradeLabel } = getGrade(overallScore);
   const missing = findMissingInfo(categoryId, answers, questions);
-  const strengths = findStrengths(answers, questions);
+  const strengths = findStrengths(categoryId, answers, questions);
   const stars = scoreToStars(overallScore);
 
   return {
@@ -119,14 +124,17 @@ function computeDimensions(categoryId, answers, questions) {
 /** 不足情報を特定 */
 function findMissingInfo(categoryId, answers, questions) {
   const missing = [];
+  const hasQuestion = (id) => questions.some((q) => q.id === id);
 
-  if (!answers.industry) {
+  if (hasQuestion("industry") && !answers.industry) {
     missing.push("取引先の業種（エステ・美容室・クリニック等）");
   }
-  if (!answers.client_challenge) {
+  if (hasQuestion("client_challenge") && !answers.client_challenge) {
     missing.push("お客様の経営課題（売上・集客・リピート等）");
   }
-  if (!answers.extra_info || answers.extra_info.length < 5) {
+
+  const extraQ = questions.find((q) => q.id === "extra_info");
+  if (extraQ && !extraQ.optional && (!answers.extra_info || answers.extra_info.length < 5)) {
     missing.push("取引先名・具体的状況・競合情報などの追加情報");
   }
 
@@ -137,6 +145,11 @@ function findMissingInfo(categoryId, answers, questions) {
     output_format: "出力形式",
     sales_type: "営業種別",
     proposal_type: "提案書の種類",
+    wam_product: "対象商品（公式HP）",
+    usage: "用途",
+    message: "訴求メッセージ",
+    style: "スタイル",
+    aspect: "サイズ・比率",
   };
 
   for (const [key, label] of Object.entries(keyLabels)) {
@@ -150,11 +163,23 @@ function findMissingInfo(categoryId, answers, questions) {
     missing.push("営業種別（テレアポ・商談・DM等）");
   }
 
+  if (categoryId === "image") {
+    if (!answers.wam_product) {
+      missing.push("対象商品（株式会社ワム 公式HP）");
+    } else if (answers.wam_product !== NO_PRODUCT_OPTION) {
+      const product = resolveProductFromAnswers(answers);
+      const mode = getProductImageMode(product);
+      if (mode === "upload_required" && !answers.product_image_upload) {
+        missing.push("公式HPに商品画像がないため、正規商品画像のアップロード");
+      }
+    }
+  }
+
   return missing.slice(0, 4);
 }
 
 /** 強みを特定 */
-function findStrengths(answers, questions) {
+function findStrengths(categoryId, answers, questions) {
   const strengths = [];
 
   if (answers.industry) strengths.push(`${answers.industry}向けに最適化`);
@@ -162,6 +187,18 @@ function findStrengths(answers, questions) {
   if (answers.extra_info && answers.extra_info.length > 10) strengths.push("取引先の具体情報を反映");
   if (answers.tone) strengths.push(`トーン「${answers.tone}」を指定`);
   if (answers.ai_role) strengths.push(`AI役割「${answers.ai_role}」を明確化`);
+
+  if (categoryId === "image" && answers.wam_product) {
+    if (answers.wam_product === NO_PRODUCT_OPTION) {
+      strengths.push("商品なしモード（背景・人物・装飾・文字のみ）");
+    } else {
+      strengths.push(`公式HP商品「${answers.wam_product}」を指定`);
+      const product = resolveProductFromAnswers(answers);
+      if (getProductImageMode(product) === "official") {
+        strengths.push("公式商品画像URLを参照（加工禁止・配置のみ）");
+      }
+    }
+  }
 
   const filled = Object.keys(answers).filter((k) => answers[k]).length;
   if (filled >= questions.length - 1) strengths.push("質問への回答が充実");
