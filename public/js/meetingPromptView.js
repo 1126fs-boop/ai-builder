@@ -8,6 +8,7 @@ import { saveAI, addRecentAI } from "./storage.js";
 import { state } from "./state.js";
 import { DOM, showView, showToast, showGenerating, showGeneratingStep } from "./ui.js";
 import { withTimeout } from "./asyncUtils.js";
+import { createProfiler } from "./ai/performanceProfiler.js";
 
 const LOG = "[meetingPromptView]";
 const GENERATION_TIMEOUT_MS = 30000;
@@ -61,7 +62,7 @@ async function handleGenerate(handlers) {
 
   showView("result");
   showGenerating(true);
-  showGeneratingStep("AI会議の内容をプロンプトに変換中...");
+  showGeneratingStep("AI会議の内容をプロンプトに変換中…");
 
   try {
     await withTimeout(runMeetingGeneration(edits, handlers), GENERATION_TIMEOUT_MS, "プロンプト生成");
@@ -77,11 +78,29 @@ async function handleGenerate(handlers) {
 }
 
 async function runMeetingGeneration(edits, handlers) {
-  showGeneratingStep("プロンプトを構築中...");
-  const quality = evaluateMeetingPrompt(edits);
-  const prompt = buildPromptFromMeeting(edits);
+  const profiler = createProfiler("会議→プロンプト生成");
+  profiler.mark("開始");
 
-  showGeneratingStep("保存中...");
+  showGeneratingStep("品質診断とプロンプト構築を並列実行中…");
+
+  const [quality, prompt] = await Promise.all([
+    Promise.resolve().then(() => {
+      showGeneratingStep("品質診断中…");
+      return evaluateMeetingPrompt(edits);
+    }),
+    Promise.resolve().then(() => {
+      showGeneratingStep("プロンプトを構築中…");
+      return buildPromptFromMeeting(edits);
+    }),
+  ]);
+
+  profiler.mark("プロンプト構築完了");
+
+  if (!prompt?.trim()) {
+    throw new Error("プロンプトの生成に失敗しました。");
+  }
+
+  showGeneratingStep("クラウドに保存中…");
   const title = generateMeetingTitle(edits.topic);
   const saved = await saveAI({
     title,
@@ -91,6 +110,9 @@ async function runMeetingGeneration(edits, handlers) {
     answers: edits,
     quality,
   });
+
+  profiler.mark("Supabase保存完了");
+  profiler.report();
 
   state.categoryId = "agent";
   state.savedPromptId = saved.id;

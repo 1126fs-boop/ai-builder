@@ -6,8 +6,9 @@ import { buildMeetingTransferPayload } from "../ai/contentFramework.js";
 
 export const MEETING_PROMPT_KEY = "aibuilder_meeting_prompt_transfer";
 
-export function saveMeetingForPrompt(meetingResult) {
-  const payload = buildMeetingTransferPayload(meetingResult);
+/** 会議結果をプロンプト生成用に保存（キャッシュ済みペイロードがあれば再利用） */
+export function saveMeetingForPrompt(meetingResult, cachedPayload = null) {
+  const payload = cachedPayload || buildMeetingTransferPayload(meetingResult);
   sessionStorage.setItem(MEETING_PROMPT_KEY, JSON.stringify({ ...payload, savedAt: Date.now() }));
   return payload;
 }

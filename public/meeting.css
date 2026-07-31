@@ -254,6 +254,21 @@ body {
   color: var(--color-text-secondary);
 }
 
+.discussion-header__status--active {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.discussion-header__status--active::before {
+  content: "● ";
+  animation: meeting-status-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes meeting-status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
 .discussion-thread {
   display: flex;
   flex-direction: column;
@@ -324,6 +339,7 @@ body {
   font-size: 0.875rem;
   line-height: 1.75;
   color: var(--color-text);
+  white-space: pre-wrap;
 }
 
 /* 履歴 */
