@@ -19,3 +19,5 @@ Thumbs.db
 # Temp / scrape artifacts
 _tmp_*
 _wam_*.json
+.vercel
+.env*

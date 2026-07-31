@@ -67,25 +67,11 @@ async function runGeneration() {
   showGeneratingStep("回答内容を整理中…");
   await yieldToMain();
 
-  // 結果画面を先に表示（ストリーミング先）
   currentSavedId = null;
   state.savedPromptId = null;
-  DOM.promptOutput.textContent = "";
-
-  let streamedText = "";
-  let overlayDismissed = false;
 
   const genResult = await generateWizardPrompt(state.categoryId, state.answers, {
     onStep: (step) => showGeneratingStep(step),
-    onDelta: (text) => {
-      if (!overlayDismissed) {
-        showGenerating(false);
-        overlayDismissed = true;
-      }
-      streamedText += text;
-      DOM.promptOutput.textContent = streamedText;
-      DOM.promptOutput.scrollTop = DOM.promptOutput.scrollHeight;
-    },
   });
 
   state.categoryId = genResult.category;
@@ -101,15 +87,10 @@ async function runGeneration() {
     datetime: new Date().toISOString(),
   };
 
-  if (genResult.metrics.fallback) {
-    showToast("GPT-4o を利用できないため、テンプレートで生成しました");
-  } else {
-    showToast("GPT-4o でプロンプトを生成しました");
-  }
-
+  showToast("プロンプトを生成しました");
   showGeneratingStep("");
   renderResult(previewSaved);
-  logGenerationSummary(genResult, { networkCalls: genResult.metrics.aiApiCalls });
+  logGenerationSummary(genResult, { networkCalls: 0 });
 
   const saveStart = performance.now();
   saveAI(toSavePayload(genResult)).then((saved) => {
