@@ -4,6 +4,7 @@
 
 import { MEETING_ROLES, getDiscussionRoles, getFacilitatorRole } from "./roles.js";
 import { runMeeting } from "./discussionEngine.js";
+import { saveMeetingForPrompt, navigateToPromptGeneration } from "./meetingBridge.js";
 import {
   saveMeeting,
   getMeetings,
@@ -49,6 +50,7 @@ const DOM = {
   btnBackToHistory: () => document.getElementById("btn-back-to-history"),
   historyDetail: () => document.getElementById("history-detail"),
   btnDeleteMeeting: () => document.getElementById("btn-delete-meeting"),
+  btnGeneratePrompt: () => document.getElementById("btn-generate-prompt"),
 };
 
 function renderRoleGrid() {
@@ -161,6 +163,7 @@ async function startMeeting() {
   DOM.meetingTopicDisplay()?.replaceChildren(document.createTextNode(topic));
   DOM.meetingStatus()?.replaceChildren(document.createTextNode("AIが議論中です..."));
   DOM.btnSave()?.setAttribute("hidden", "");
+  DOM.btnGeneratePrompt()?.setAttribute("hidden", "");
 
   showMeetingView("discussion");
 
@@ -181,7 +184,10 @@ async function startMeeting() {
           messages.push(msg);
         }
       },
-      400
+      (status) => {
+        DOM.meetingStatus()?.replaceChildren(document.createTextNode(status));
+      },
+      100
     );
 
     conclusion = result.conclusion;
@@ -196,7 +202,8 @@ async function startMeeting() {
     };
 
     DOM.btnSave()?.removeAttribute("hidden");
-    showToast("会議が完了しました。保存できます。");
+    DOM.btnGeneratePrompt()?.removeAttribute("hidden");
+    showToast("会議が完了しました。保存またはプロンプト生成ができます。");
   } catch (err) {
     console.error("[meeting]", err);
     showToast("会議中にエラーが発生しました");
@@ -228,11 +235,21 @@ function handleDeleteMeeting() {
   showMeetingView("history");
 }
 
+function handleGeneratePrompt() {
+  if (!currentMeetingResult) {
+    showToast("会議結果がありません");
+    return;
+  }
+  saveMeetingForPrompt(currentMeetingResult);
+  navigateToPromptGeneration();
+}
+
 function resetToSetup() {
   currentMeetingResult = null;
   const thread = DOM.discussionThread();
   if (thread) thread.innerHTML = "";
   DOM.btnSave()?.setAttribute("hidden", "");
+  DOM.btnGeneratePrompt()?.setAttribute("hidden", "");
   showMeetingView("setup");
 }
 
@@ -260,6 +277,7 @@ async function init() {
     showMeetingView("history");
   });
   DOM.btnDeleteMeeting()?.addEventListener("click", handleDeleteMeeting);
+  DOM.btnGeneratePrompt()?.addEventListener("click", handleGeneratePrompt);
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(() => {});

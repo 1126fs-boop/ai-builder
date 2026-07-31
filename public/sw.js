@@ -3,7 +3,7 @@
  * 静的アセットをキャッシュし、オフライン閲覧をサポート
  */
 
-const CACHE_NAME = "aibuilder-pwa-v3";
+const CACHE_NAME = "aibuilder-pwa-v4";
 
 const PRECACHE = [
   "/",
@@ -34,11 +34,16 @@ const PRECACHE = [
   "/js/homeView.js",
   "/js/questionView.js",
   "/js/resultView.js",
+  "/js/meetingPromptView.js",
+  "/js/ai/contentFramework.js",
+  "/js/ai/promptEnhancer.js",
+  "/js/ai/meetingRoundEngine.js",
   "/js/meeting/meetingApp.js",
   "/js/meeting/roles.js",
   "/js/meeting/discussionEngine.js",
   "/js/meeting/meetingStorage.js",
   "/js/meeting/meetingUi.js",
+  "/js/meeting/meetingBridge.js",
 ];
 
 self.addEventListener("install", (event) => {

@@ -292,6 +292,17 @@ body {
   flex: 1;
 }
 
+.message-bubble__round {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-subtle);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  flex: 1;
+  text-align: right;
+}
+
 .message-bubble__order {
   font-size: 0.7rem;
   color: var(--color-text-secondary);

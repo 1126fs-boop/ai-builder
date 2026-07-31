@@ -13,6 +13,12 @@ import {
   getImagePromptFooter,
 } from "./wamImageContext.js";
 import { resolveProductFromAnswers, NO_PRODUCT_OPTION } from "./wamProducts.js";
+import {
+  structuredPro,
+  buildMeetingPromptPayload,
+  DEFAULT_THINKING_PROCESS,
+  DEFAULT_EVALUATION_CRITERIA,
+} from "./js/ai/promptEnhancer.js";
 
 /** 経営課題 → 訴求インパクトのマッピング */
 const CHALLENGE_IMPACT = {
@@ -62,27 +68,28 @@ const FORMAT_INSTRUCTIONS = {
 };
 
 /**
- * 構造化プロンプトを組み立て
+ * 構造化プロンプトを組み立て（高品質版）
  */
-function structured({ role, mission, context, rules, format, tone, example }) {
-  return `# あなたの役割
-${role}
-
-# ミッション
-${mission}
-
-# 背景・コンテキスト
-${context}
-
-# 作成ルール（必ず守る）
-${rules.map((r, i) => `${i + 1}. ${r}`).join("\n")}
-
-# 出力形式
-${format}
-
-# 文体・トーン
-${tone}
-${example ? `\n# 出力構造（参考）\n${example}` : ""}`;
+function structured({ role, mission, context, rules, format, tone, example, purpose, target, prerequisites }) {
+  const industry = context?.includes("取引先業種") ? context.match(/取引先業種: ([^\n]+)/)?.[1] : null;
+  return structuredPro({
+    role,
+    mission,
+    purpose: purpose || mission,
+    background: "美容BtoBソリューション営業。商品ではなく経営課題解決が主目的。",
+    target: target || (industry ? `${industry}のオーナー・院長` : "美容サロン・クリニックの経営者"),
+    prerequisites: prerequisites || "株式会社ワムのソリューション営業原則に準拠",
+    constraints: "商品スペック押し売り禁止 / 経営課題起点 / 具体数字を【】で明示可",
+    context,
+    rules,
+    thinkingProcess: DEFAULT_THINKING_PROCESS,
+    outputFormat: format,
+    evaluationCriteria: DEFAULT_EVALUATION_CRITERIA,
+    improvementPoints: "不足情報は【】プレースホルダーで明示し、営業担当者が埋められるようにする",
+    examples: example || "Before/Afterの数字例を1つ以上含める",
+    expectedOutput: "営業担当者がChatGPT等に貼り付けて即使用できる完成プロンプト",
+    tone: tone || "プロフェッショナルで現場感のある日本語",
+  });
 }
 
 /** 共通ルール */
@@ -290,6 +297,26 @@ export function generateTitle(categoryLabel, answers) {
 /** 品質診断（qualityEngine に委譲） */
 export function evaluatePrompt(categoryId, answers) {
   return diagnoseQuality(categoryId, answers);
+}
+
+/** AI会議連携 — 会議内容からプロンプト生成 */
+export function buildPromptFromMeeting(edits) {
+  const payload = buildMeetingPromptPayload(edits);
+  return wrapPrompt(structuredPro(payload));
+}
+
+/** AI会議連携 — タイトル生成 */
+export function generateMeetingTitle(topic) {
+  return `AI会議 — ${topic}`.slice(0, 80);
+}
+
+/** AI会議連携 — 品質評価 */
+export function evaluateMeetingPrompt(edits) {
+  return diagnoseQuality("agent", {
+    purpose: edits.topic,
+    feature: "AI会議連携プロンプト",
+    role: "ソリューション営業",
+  });
 }
 
 /** @deprecated getQualityCheck → evaluatePrompt */

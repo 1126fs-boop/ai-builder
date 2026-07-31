@@ -9,6 +9,7 @@ import { initQuestionView, startCategory, goNext, goPrev, goHomeFromQuestions } 
 import {
   initResultView,
   showGeneratedResult,
+  showMeetingResult,
   openSavedResult,
   openTemplateResult,
   copyPrompt,
@@ -16,6 +17,7 @@ import {
   restartCategory,
   goHomeFromResult,
 } from "./resultView.js";
+import { initMeetingPromptView, tryOpenMeetingPromptView } from "./meetingPromptView.js";
 import { registerServiceWorker } from "./pwa.js";
 import { initStorage } from "./storage.js";
 import { initAuthBar } from "./authBar.js";
@@ -44,7 +46,16 @@ async function init() {
 
   initResultView({ onGoHome: goHome });
 
+  initMeetingPromptView({
+    onComplete: showMeetingResult,
+    onCancel: goHome,
+  });
+
   await renderHome();
+
+  if (tryOpenMeetingPromptView()) {
+    /* AI会議からの引き継ぎ */
+  }
 
   DOM.searchInput?.addEventListener("input", (e) => handleSearchInput(e.target.value));
   DOM.btnNewAi?.addEventListener("click", handleNewAiClick);

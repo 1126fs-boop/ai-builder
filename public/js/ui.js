@@ -8,6 +8,15 @@ export const DOM = {
   viewHome: document.getElementById("view-home"),
   viewQuestions: document.getElementById("view-questions"),
   viewResult: document.getElementById("view-result"),
+  viewMeetingPrompt: document.getElementById("view-meeting-prompt"),
+
+  meetingPromptTopic: document.getElementById("meeting-prompt-topic"),
+  meetingPromptSummary: document.getElementById("meeting-prompt-summary"),
+  meetingPromptConclusion: document.getElementById("meeting-prompt-conclusion"),
+  meetingPromptPreconditions: document.getElementById("meeting-prompt-preconditions"),
+  meetingPromptDiscussion: document.getElementById("meeting-prompt-discussion"),
+  btnGenerateFromMeeting: document.getElementById("btn-generate-from-meeting"),
+  btnCancelMeetingPrompt: document.getElementById("btn-cancel-meeting-prompt"),
 
   searchInput: document.getElementById("search-input"),
   btnNewAi: document.getElementById("btn-new-ai"),
@@ -33,6 +42,7 @@ export const DOM = {
   btnNextLabel: document.getElementById("btn-next-label"),
 
   generatingOverlay: document.getElementById("generating-overlay"),
+  generatingStep: document.getElementById("generating-step"),
   resultGrade: document.getElementById("result-grade"),
   resultTitle: document.getElementById("result-title"),
   resultCategoryLabel: document.getElementById("result-category-label"),
@@ -58,13 +68,15 @@ export const VIEWS = {
   home: DOM.viewHome,
   questions: DOM.viewQuestions,
   result: DOM.viewResult,
+  meetingPrompt: DOM.viewMeetingPrompt,
 };
 
 let toastTimer = null;
 
-/** @param {"home"|"questions"|"result"} name */
+/** @param {"home"|"questions"|"result"|"meetingPrompt"} name */
 export function showView(name) {
   Object.entries(VIEWS).forEach(([key, el]) => {
+    if (!el) return;
     const active = key === name;
     el.classList.toggle("view--active", active);
     el.hidden = !active;
@@ -99,7 +111,12 @@ export function renderEmpty(container, message, icon = "📭") {
 
 /** 生成中オーバーレイ */
 export function showGenerating(show) {
-  DOM.generatingOverlay.hidden = !show;
+  if (DOM.generatingOverlay) DOM.generatingOverlay.hidden = !show;
+}
+
+/** 生成ステップ表示 */
+export function showGeneratingStep(text) {
+  if (DOM.generatingStep) DOM.generatingStep.textContent = text || "";
 }
 
 /** HTML エスケープ */
