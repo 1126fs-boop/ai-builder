@@ -1,0 +1,406 @@
+/* ============================================================
+   AI会議 — 専用スタイル（既存 style.css とは独立）
+   ============================================================ */
+
+:root {
+  --color-bg: #ffffff;
+  --color-bg-subtle: #f7f7f8;
+  --color-text: #1a1a1a;
+  --color-text-secondary: #6e6e80;
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+  --color-accent-light: #eff6ff;
+  --color-border: #ececf1;
+  --color-success: #059669;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.08);
+  --max-width: 720px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-family: var(--font-sans); color: var(--color-text); background: var(--color-bg); }
+
+body {
+  min-height: 100dvh;
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+}
+
+.app {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 16px 32px;
+}
+
+/* App Bar（既存と同系統） */
+.app-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.app-bar__user { font-size: 0.8rem; color: var(--color-text-secondary); }
+
+.app-bar__actions { display: flex; gap: 12px; align-items: center; }
+
+.app-bar__link {
+  font-size: 0.8rem;
+  color: var(--color-accent);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.app-bar__link:hover { color: var(--color-accent-hover); }
+
+/* Hero */
+.hero { padding: 24px 0 20px; text-align: center; }
+
+.hero__badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  background: var(--color-accent-light);
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  margin-bottom: 12px;
+}
+
+.hero__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+}
+
+.hero__subtitle {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+/* ビュー */
+[data-meeting-view] { display: none; }
+[data-meeting-view].meeting-view--active { display: block; }
+
+/* セクション */
+.meeting-section { margin-bottom: 24px; }
+
+.meeting-section__title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.meeting-section__desc {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+/* 入力 */
+.meeting-input {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.15s;
+}
+
+.meeting-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-light);
+}
+
+/* 役割カード */
+.role-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.role-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: var(--color-bg);
+}
+
+.role-card:hover { background: var(--color-bg-subtle); }
+
+.role-card--selected {
+  border-color: var(--color-accent);
+  background: var(--color-accent-light);
+}
+
+.role-card__checkbox { display: none; }
+
+.role-card__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.role-card__info { flex: 1; min-width: 0; }
+
+.role-card__name {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.role-card__desc {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+/* ボタン */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, opacity 0.15s;
+  min-height: 48px;
+}
+
+.btn--primary {
+  background: var(--color-accent);
+  color: #fff;
+  width: 100%;
+}
+
+.btn--primary:hover:not(:disabled) { background: var(--color-accent-hover); }
+
+.btn--primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn--secondary {
+  background: var(--color-bg-subtle);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  width: 100%;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--color-accent);
+  padding: 8px 0;
+  min-height: auto;
+  width: auto;
+}
+
+.btn-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+/* 議論スレッド */
+.discussion-header {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 16px;
+}
+
+.discussion-header__topic {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.discussion-header__status {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.discussion-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 24px;
+}
+
+/* 発言バブル */
+.message-bubble {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--role-color, var(--color-accent));
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  animation: fadeInUp 0.35s ease;
+}
+
+.message-bubble--conclusion {
+  background: linear-gradient(135deg, #eef2ff 0%, #eff6ff 100%);
+  border-color: #4f46e5;
+  border-left-width: 4px;
+}
+
+.message-bubble__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.message-bubble__icon { font-size: 1.25rem; }
+
+.message-bubble__name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex: 1;
+}
+
+.message-bubble__order {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-subtle);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.message-bubble__badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #4f46e5;
+  background: #eef2ff;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+}
+
+.message-bubble__body {
+  font-size: 0.875rem;
+  line-height: 1.75;
+  color: var(--color-text);
+}
+
+/* 履歴 */
+.history-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+
+.history-item:hover { background: var(--color-bg-subtle); }
+
+.history-item__title {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.history-item__meta {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.history-detail__header {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.history-detail__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.history-detail__meta {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+/* トースト */
+.meeting-toast {
+  position: fixed;
+  bottom: calc(24px + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #1a1a1a;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 1000;
+  max-width: 90vw;
+  text-align: center;
+}
+
+.meeting-toast--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* スマホ対応 */
+@media (max-width: 640px) {
+  .hero__title { font-size: 1.5rem; }
+  .role-card { padding: 10px 12px; }
+  .message-bubble__body { font-size: 0.825rem; }
+}
