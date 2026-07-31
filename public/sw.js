@@ -3,12 +3,14 @@
  * 静的アセットをキャッシュし、オフライン閲覧をサポート
  */
 
-const CACHE_NAME = "aibuilder-pwa-v2";
+const CACHE_NAME = "aibuilder-pwa-v3";
 
 const PRECACHE = [
   "/",
   "/index.html",
+  "/meeting.html",
   "/style.css",
+  "/meeting.css",
   "/manifest.webmanifest",
   "/icons/icon.svg",
   "/icons/icon-192.png",
@@ -32,6 +34,11 @@ const PRECACHE = [
   "/js/homeView.js",
   "/js/questionView.js",
   "/js/resultView.js",
+  "/js/meeting/meetingApp.js",
+  "/js/meeting/roles.js",
+  "/js/meeting/discussionEngine.js",
+  "/js/meeting/meetingStorage.js",
+  "/js/meeting/meetingUi.js",
 ];
 
 self.addEventListener("install", (event) => {

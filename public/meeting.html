@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="AI Builder — AI会議モード。複数の役割別AIが議論し、総合結論を出します。">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="AI会議">
+  <title>AI会議 — AI Builder</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="stylesheet" href="/meeting.css">
+</head>
+<body>
+
+  <div id="app" class="app">
+
+    <header class="app-bar" id="app-bar">
+      <span class="app-bar__user" id="app-bar-user"></span>
+      <div class="app-bar__actions">
+        <a href="/index.html" class="app-bar__link">AI Builder</a>
+        <a href="/admin" id="app-bar-admin" class="app-bar__link" hidden>管理</a>
+        <button type="button" id="btn-logout" class="app-bar__link app-bar__btn">ログアウト</button>
+      </div>
+    </header>
+
+    <!-- ===== 会議セットアップ ===== -->
+    <div data-meeting-view="setup" class="meeting-view--active">
+
+      <header class="hero">
+        <div class="hero__badge">新機能 · AI会議モード</div>
+        <h1 class="hero__title">AI会議</h1>
+        <p class="hero__subtitle">複数の役割別AIが議題について議論し、ファシリテーターAIが総合結論をまとめます。</p>
+      </header>
+
+      <section class="meeting-section">
+        <h2 class="meeting-section__title">議題を入力</h2>
+        <p class="meeting-section__desc">営業チームで検討したいテーマ・課題を入力してください。</p>
+        <textarea id="meeting-topic" class="meeting-input" placeholder="例：新規サロン開拓の営業戦略をどう強化すべきか？" rows="3"></textarea>
+      </section>
+
+      <section class="meeting-section">
+        <h2 class="meeting-section__title">参加AIを選択（会議モード）</h2>
+        <p class="meeting-section__desc">1人でも複数人でも利用できます。ファシリテーターAIは自動で参加し、最後に総合結論を出します。</p>
+        <div id="role-grid" class="role-grid"></div>
+      </section>
+
+      <div class="btn-row">
+        <button type="button" id="btn-start-meeting" class="btn btn--primary">会議を開始</button>
+        <button type="button" id="btn-show-history" class="btn btn--secondary">保存した会議履歴を見る</button>
+      </div>
+
+    </div>
+
+    <!-- ===== 議論中・結果 ===== -->
+    <div data-meeting-view="discussion" hidden>
+
+      <header class="discussion-header">
+        <p class="discussion-header__topic" id="meeting-topic-display"></p>
+        <p class="discussion-header__status" id="meeting-status">準備中...</p>
+      </header>
+
+      <div id="discussion-thread" class="discussion-thread"></div>
+
+      <div class="btn-row">
+        <button type="button" id="btn-save-meeting" class="btn btn--primary" hidden>会議結果を保存</button>
+        <button type="button" id="btn-new-meeting" class="btn btn--secondary">新しい会議を始める</button>
+        <button type="button" id="btn-back-setup" class="btn btn--ghost">← セットアップに戻る</button>
+      </div>
+
+    </div>
+
+    <!-- ===== 履歴一覧 ===== -->
+    <div data-meeting-view="history" hidden>
+
+      <header class="hero">
+        <h1 class="hero__title">会議履歴</h1>
+        <p class="hero__subtitle">保存したAI会議の結果を後から閲覧できます。</p>
+      </header>
+
+      <div id="meeting-history-list"></div>
+
+      <div class="btn-row">
+        <button type="button" id="btn-back-from-history" class="btn btn--secondary">← 会議セットアップに戻る</button>
+      </div>
+
+    </div>
+
+    <!-- ===== 履歴詳細 ===== -->
+    <div data-meeting-view="history-detail" hidden>
+
+      <div id="history-detail"></div>
+
+      <div class="btn-row">
+        <button type="button" id="btn-delete-meeting" class="btn btn--secondary">この履歴を削除</button>
+        <button type="button" id="btn-back-to-history" class="btn btn--ghost">← 履歴一覧に戻る</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script type="module" src="/js/meeting/meetingApp.js"></script>
+</body>
+</html>
