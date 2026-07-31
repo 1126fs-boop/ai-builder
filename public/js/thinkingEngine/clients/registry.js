@@ -19,6 +19,8 @@ const HANDLERS = new Map([
   [`${CLIENT.PROMPT}:${SCENARIO.PROMPT.WIZARD}`, (input) => promptClient.runWizard(input)],
   [`${CLIENT.PROMPT}:${SCENARIO.PROMPT.EDITS}`, (input) => promptClient.runEdits(input)],
   [`${CLIENT.PROMPT}:${SCENARIO.PROMPT.TO_PAYLOAD}`, (input) => promptClient.runToPayload(input)],
+  [`${CLIENT.PROMPT}:${SCENARIO.PROMPT.GAP}`, (input) => promptClient.runProposalGap(input)],
+  [`${CLIENT.PROMPT}:${SCENARIO.PROMPT.PROPOSAL_DELIVERABLE}`, (input) => promptClient.runProposalDeliverable(input)],
 
   [`${CLIENT.ANALYSIS}:${SCENARIO.ANALYSIS.REPORT}`, (input) => futureClient.runAnalysisReport(input)],
   [`${CLIENT.DOCUMENT}:${SCENARIO.DOCUMENT.DRAFT}`, (input) => futureClient.runDocumentDraft(input)],

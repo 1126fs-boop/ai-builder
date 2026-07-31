@@ -94,6 +94,26 @@ export function buildMeetingTransferPayload(meetingResult) {
   return result.output;
 }
 
+/** 提案書 — ギャップ分析 */
+export function analyzeProposalGaps(answers) {
+  return runThinking({
+    client: CLIENT.PROMPT,
+    scenario: SCENARIO.PROMPT.GAP,
+    input: { answers },
+  });
+}
+
+/** 提案書 — 成果物生成（Blueprint v1） */
+export function buildProposalDeliverable(answers) {
+  return runThinking({
+    client: CLIENT.PROMPT,
+    scenario: SCENARIO.PROMPT.PROPOSAL_DELIVERABLE,
+    input: { answers },
+  });
+}
+
+export { hasSchemaFlow, runGapAnalysis, getSeedQuestions } from "./schemas/index.js";
+
 // ── 共通ユーティリティ ──
 
 export {

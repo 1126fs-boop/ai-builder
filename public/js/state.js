@@ -10,6 +10,10 @@ export const state = {
   savedPromptId: null,
   searchQuery: "",
   libraryFilter: "all",
+  /** Schema フロー用 */
+  questionFlow: null,
+  gapAnalysisDone: false,
+  inferredAnswers: {},
 };
 
 export function resetFlow() {
@@ -17,6 +21,9 @@ export function resetFlow() {
   state.answers = {};
   state.customDraft = null;
   state.savedPromptId = null;
+  state.questionFlow = null;
+  state.gapAnalysisDone = false;
+  state.inferredAnswers = {};
 }
 
 export function resetAll() {

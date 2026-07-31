@@ -81,7 +81,8 @@ async function runGeneration() {
   currentSavedId = null;
   state.savedPromptId = null;
 
-  const genResult = await generateWizardPrompt(state.categoryId, state.answers, {
+  const mergedAnswers = { ...state.inferredAnswers, ...state.answers };
+  const genResult = await generateWizardPrompt(state.categoryId, mergedAnswers, {
     onStep: (step) => showGeneratingStep(step),
   });
   console.log(`${LOG} runGeneration: template done`, {
