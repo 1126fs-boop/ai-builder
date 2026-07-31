@@ -46,8 +46,7 @@ export function createProfiler(scope) {
 
 /** UI更新のためにメインスレッドへ制御を返す（人工sleepの代替） */
 export function yieldToMain() {
-  if (typeof globalThis.scheduler !== "undefined" && typeof globalThis.scheduler.yield === "function") {
-    return globalThis.scheduler.yield();
-  }
-  return new Promise((resolve) => requestAnimationFrame(resolve));
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => setTimeout(resolve, 0));
+  });
 }

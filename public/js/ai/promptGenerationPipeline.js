@@ -19,16 +19,30 @@ import {
  * @param {{ onStep?: Function, onDelta?: Function }} [callbacks]
  */
 export async function generateWizardPrompt(categoryId, answers, callbacks = {}) {
+  console.log("[promptPipeline] generateWizardPrompt: start", { categoryId, provider: ACTIVE_PROVIDER });
   const result = await generateWizardViaProvider(categoryId, answers, callbacks);
-  return normalizeResult(result);
+  const normalized = normalizeResult(result);
+  console.log("[promptPipeline] generateWizardPrompt: done", {
+    source: normalized.metrics.source,
+    ms: normalized.metrics.totalMs,
+    promptLen: normalized.prompt?.length,
+  });
+  return normalized;
 }
 
 /**
  * 会議連携 — プロンプト生成
  */
 export async function generateMeetingPrompt(edits, callbacks = {}) {
+  console.log("[promptPipeline] generateMeetingPrompt: start", { provider: ACTIVE_PROVIDER });
   const result = await generateMeetingViaProvider(edits, callbacks);
-  return normalizeResult(result);
+  const normalized = normalizeResult(result);
+  console.log("[promptPipeline] generateMeetingPrompt: done", {
+    source: normalized.metrics.source,
+    ms: normalized.metrics.totalMs,
+    promptLen: normalized.prompt?.length,
+  });
+  return normalized;
 }
 
 /** 後方互換: テンプレート直接生成 */

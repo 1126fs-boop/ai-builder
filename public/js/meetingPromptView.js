@@ -12,9 +12,13 @@ import { saveAI, addRecentAI } from "./storage.js";
 import { state } from "./state.js";
 import { DOM, showView, showToast, showGenerating, showGeneratingStep } from "./ui.js";
 import { yieldToMain } from "./ai/performanceProfiler.js";
+import { withTimeout } from "./asyncUtils.js";
 
 /** @type {object|null} */
 let currentEdits = null;
+let generationInFlight = false;
+const LOG = "[meetingPromptView]";
+const GENERATION_TIMEOUT_MS = 15000;
 
 export function initMeetingPromptView(handlers) {
   DOM.btnGenerateFromMeeting?.addEventListener("click", () => handleGenerate(handlers));
@@ -59,29 +63,44 @@ async function handleGenerate(handlers) {
     showToast("議題を入力してください");
     return;
   }
+  if (generationInFlight) {
+    console.warn(`${LOG} handleGenerate: skipped (already running)`);
+    return;
+  }
 
+  generationInFlight = true;
   showView("result");
   showGenerating(true);
   showGeneratingStep("AI会議の内容を読み込み中…");
+  console.log(`${LOG} handleGenerate: start`);
 
   try {
-    await runMeetingGeneration(edits, handlers);
+    await withTimeout(runMeetingGeneration(edits, handlers), GENERATION_TIMEOUT_MS, "会議プロンプト生成");
     clearMeetingForPrompt();
+    console.log(`${LOG} handleGenerate: complete`);
   } catch (err) {
-    console.error("[meetingPromptView]", err);
+    console.error(`${LOG} handleGenerate: failed`, err);
     showToast(err instanceof Error ? err.message : "生成に失敗しました");
     showView("meetingPrompt");
   } finally {
     showGenerating(false);
     showGeneratingStep("");
+    generationInFlight = false;
+    console.log(`${LOG} handleGenerate: loading dismissed`);
   }
 }
 
 async function runMeetingGeneration(edits, handlers) {
+  console.log(`${LOG} runMeetingGeneration: start`);
   await yieldToMain();
 
   const genResult = await generateMeetingPrompt(edits, {
     onStep: (step) => showGeneratingStep(step),
+  });
+  console.log(`${LOG} runMeetingGeneration: template done`, {
+    source: genResult.metrics?.source,
+    ms: genResult.metrics?.totalMs,
+    promptLen: genResult.prompt?.length,
   });
 
   const previewSaved = {

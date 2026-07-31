@@ -24,8 +24,11 @@ import {
   logGenerationSummary,
 } from "./ai/promptGenerationPipeline.js";
 import { yieldToMain } from "./ai/performanceProfiler.js";
+import { withTimeout } from "./asyncUtils.js";
 
 const LOG = "[resultView]";
+const GENERATION_TIMEOUT_MS = 15000;
+let generationInFlight = false;
 
 let onGoHome = () => {};
 let currentSavedId = null;
@@ -36,13 +39,19 @@ export function initResultView(handlers) {
 
 /** 回答から結果を生成 */
 export async function showGeneratedResult() {
+  if (generationInFlight) {
+    console.warn(`${LOG} showGeneratedResult: skipped (already running)`);
+    return;
+  }
+
+  generationInFlight = true;
   console.log(`${LOG} showGeneratedResult: start`);
   showView("result");
   showGenerating(true);
   showGeneratingStep("プロンプト生成を準備中…");
 
   try {
-    await runGeneration();
+    await withTimeout(runGeneration(), GENERATION_TIMEOUT_MS, "プロンプト生成");
     console.log(`${LOG} showGeneratedResult: complete`);
   } catch (err) {
     console.error(`${LOG} showGeneratedResult: failed`, err);
@@ -51,6 +60,7 @@ export async function showGeneratedResult() {
   } finally {
     showGenerating(false);
     showGeneratingStep("");
+    generationInFlight = false;
     console.log(`${LOG} showGeneratedResult: loading dismissed`);
   }
 }
@@ -64,6 +74,7 @@ export function showMeetingResult(saved) {
 }
 
 async function runGeneration() {
+  console.log(`${LOG} runGeneration: start`, { categoryId: state.categoryId });
   showGeneratingStep("回答内容を整理中…");
   await yieldToMain();
 
@@ -72,6 +83,11 @@ async function runGeneration() {
 
   const genResult = await generateWizardPrompt(state.categoryId, state.answers, {
     onStep: (step) => showGeneratingStep(step),
+  });
+  console.log(`${LOG} runGeneration: template done`, {
+    source: genResult.metrics?.source,
+    ms: genResult.metrics?.totalMs,
+    promptLen: genResult.prompt?.length,
   });
 
   state.categoryId = genResult.category;

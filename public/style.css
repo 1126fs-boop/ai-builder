@@ -533,13 +533,22 @@ body {
   position: fixed;
   inset: 0;
   background: rgba(255,255,255,0.92);
-  display: flex;
+  display: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--spacing-md);
   z-index: 100;
   backdrop-filter: blur(4px);
+}
+
+/* hidden 属性 + display:flex の競合を防ぐ（loading 解除漏れ対策） */
+.generating:not([hidden]) {
+  display: flex;
+}
+
+.generating[hidden] {
+  display: none !important;
 }
 
 .generating__spinner {

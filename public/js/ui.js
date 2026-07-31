@@ -111,7 +111,15 @@ export function renderEmpty(container, message, icon = "📭") {
 
 /** 生成中オーバーレイ */
 export function showGenerating(show) {
-  if (DOM.generatingOverlay) DOM.generatingOverlay.hidden = !show;
+  const el = DOM.generatingOverlay;
+  if (!el) {
+    console.warn("[ui] generatingOverlay が見つかりません");
+    return;
+  }
+  el.hidden = !show;
+  el.setAttribute("aria-busy", show ? "true" : "false");
+  el.classList.toggle("generating--active", show);
+  console.log(`[ui] showGenerating(${show}) hidden=${el.hidden} display=${getComputedStyle(el).display}`);
 }
 
 /** 生成ステップ表示 */
