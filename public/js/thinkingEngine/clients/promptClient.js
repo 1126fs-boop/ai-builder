@@ -14,6 +14,7 @@ import {
   DEFAULT_EVALUATION_CRITERIA,
 } from "../domainKnowledge.js";
 import { assembleThinkingResult } from "../core/thinkingCore.js";
+import { runProposalGapAnalysis, runProposalPipeline } from "../core/pipeline/proposalPipeline.js";
 
 function extractMissingInfo(categoryId, answers) {
   const questions = getQuestions(categoryId);
@@ -167,4 +168,14 @@ export function runToPayload({ thinking, extras = {} }) {
     expectedOutput: extras.expectedOutput || "営業担当者がChatGPT等に貼り付けて即使用できる完成プロンプト",
     tone: extras.tone || "プロフェッショナルで現場感のある日本語",
   };
+}
+
+/** 提案書 — ギャップ分析（Dynamic 質問決定） */
+export function runProposalGap({ answers }) {
+  return runProposalGapAnalysis(answers);
+}
+
+/** 提案書 — 成果物 Blueprint + 完成プロンプト */
+export function runProposalDeliverable({ answers }) {
+  return runProposalPipeline(answers);
 }

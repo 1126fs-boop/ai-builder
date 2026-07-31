@@ -3,7 +3,7 @@
  * 静的アセットをキャッシュし、オフライン閲覧をサポート
  */
 
-const CACHE_NAME = "aibuilder-pwa-v13";
+const CACHE_NAME = "aibuilder-pwa-v14";
 
 const PRECACHE = [
   "/",
@@ -51,6 +51,13 @@ const PRECACHE = [
   "/js/thinkingEngine/clients/meetingClient.js",
   "/js/thinkingEngine/clients/promptClient.js",
   "/js/thinkingEngine/clients/futureClient.js",
+  "/js/thinkingEngine/schemas/index.js",
+  "/js/thinkingEngine/schemas/types.js",
+  "/js/thinkingEngine/schemas/proposalDoc.js",
+  "/js/thinkingEngine/blueprints/proposalDoc.js",
+  "/js/thinkingEngine/rubrics/proposalQuality.js",
+  "/js/thinkingEngine/renderers/proposalDeliverable.js",
+  "/js/thinkingEngine/core/pipeline/proposalPipeline.js",
   "/js/meeting/meetingApp.js",
   "/js/meeting/roles.js",
   "/js/meeting/discussionEngine.js",

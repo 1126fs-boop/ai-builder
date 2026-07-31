@@ -15,7 +15,7 @@ import {
 import { diagnoseQuality } from "../../qualityEngine.js";
 import { buildMeetingPromptPayload, structuredPro } from "./promptEnhancer.js";
 import { wrapPrompt } from "../../context.js";
-import { analyzeForWizard } from "../thinkingEngine/index.js";
+import { analyzeForWizard, buildProposalDeliverable } from "../thinkingEngine/index.js";
 
 /** @typedef {"template"|"openai"} PromptProviderId */
 
@@ -39,15 +39,24 @@ export async function generateWizardViaProvider(categoryId, answers, callbacks =
   }
 
   callbacks.onStep?.("思考エンジンで内容を整理中…");
-  const thinking = analyzeForWizard(categoryId, answers);
 
-  callbacks.onStep?.("プロンプトを生成中…");
-  const quality = diagnoseQuality(categoryId, answers);
-  const prompt = buildPrompt(categoryId, answers, thinking);
+  let prompt;
+  let thinking;
+
+  if (categoryId === "proposal") {
+    thinking = buildProposalDeliverable(answers);
+    prompt = thinking.deliverablePrompt;
+  } else {
+    thinking = analyzeForWizard(categoryId, answers);
+    prompt = buildPrompt(categoryId, answers, thinking);
+  }
 
   if (!prompt?.trim()) {
     throw new Error("プロンプトの生成に失敗しました。");
   }
+
+  callbacks.onStep?.("プロンプトを生成中…");
+  const quality = diagnoseQuality(categoryId, answers);
 
   const title = generateTitle(category.label, answers);
   profiler.mark("完了");

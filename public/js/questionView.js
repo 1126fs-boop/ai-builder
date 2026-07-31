@@ -4,6 +4,7 @@
 
 import { getCategory } from "../categories.js";
 import { getQuestions } from "../questions.js";
+import { hasSchemaFlow, getSeedQuestions, runGapAnalysis } from "./thinkingEngine/schemas/index.js";
 import { state, resetFlow } from "./state.js";
 import { DOM, showView } from "./ui.js";
 import { addRecentCategory } from "./storage.js";
@@ -23,6 +24,10 @@ const QUESTION_HINTS = {
   extra_info: "取引先名・競合・予算感など。入力すると品質スコアが大幅アップ",
   wam_product: "株式会社ワム公式HP（wamu-gr.co.jp/product/）掲載商品から選択。画像生成のみ公式HPを参照",
   product_image_upload: "公式HPに商品画像がない商品は、正規パッケージ写真をAIツールにアップロードしてから記載",
+  proposal_scope: "提案書の種類に合わせて構成とトーンを最適化します",
+  product_area: "提案する商品・サービス領域です",
+  client_context: "取引先の状況を入力すると提案書の具体性が大きく向上します",
+  hearing_notes: "商談メモがあれば貼り付けてください",
 };
 
 export function initQuestionView(handlers) {
@@ -48,11 +53,23 @@ export function startCategory(categoryId) {
   resetFlow();
   state.categoryId = categoryId;
 
+  if (hasSchemaFlow(categoryId)) {
+    state.questionFlow = [...getSeedQuestions(categoryId)];
+    state.gapAnalysisDone = false;
+    state.inferredAnswers = {};
+  }
+
   DOM.wizardCategory.textContent = `${category.icon} ${category.label}`;
   addRecentCategory(categoryId);
 
   renderQuestion();
   showView("questions");
+}
+
+/** 現在の質問リスト（Schema フロー or 従来） */
+function getActiveQuestions() {
+  if (state.questionFlow?.length) return state.questionFlow;
+  return getQuestions(state.categoryId);
 }
 
 function renderProgress(current, total) {
@@ -72,7 +89,7 @@ function renderProgress(current, total) {
 }
 
 export function renderQuestion() {
-  const questions = getQuestions(state.categoryId);
+  const questions = getActiveQuestions();
   const question = questions[state.questionIndex];
   const index = state.questionIndex;
 
@@ -206,14 +223,30 @@ function updateNavButtons(question) {
   const valid = question.optional ? true : Boolean(answer && answer.length > 0);
   DOM.btnNext.disabled = !valid;
 
-  const total = getQuestions(state.categoryId).length;
+  const total = getActiveQuestions().length;
   const isLast = state.questionIndex >= total - 1;
   DOM.btnNextLabel.textContent = isLast ? "プロンプトを生成" : "次へ";
 }
 
 export async function goNext() {
-  const total = getQuestions(state.categoryId).length;
-  if (state.questionIndex >= total - 1) {
+  const questions = getActiveQuestions();
+  const isLast = state.questionIndex >= questions.length - 1;
+
+  if (isLast && hasSchemaFlow(state.categoryId) && !state.gapAnalysisDone) {
+    const gap = runGapAnalysis(state.categoryId, state.answers);
+    state.inferredAnswers = gap.inferredAnswers;
+    state.gapAnalysisDone = true;
+
+    if (gap.followUpQuestions.length > 0) {
+      state.questionFlow = [...questions, ...gap.followUpQuestions];
+      state.questionIndex++;
+      state.customDraft = null;
+      renderQuestion();
+      return;
+    }
+  }
+
+  if (isLast) {
     await onComplete();
   } else {
     state.questionIndex++;

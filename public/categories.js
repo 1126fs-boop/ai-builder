@@ -18,9 +18,9 @@ export const CATEGORIES = [
   },
   {
     id: "proposal",
-    label: "提案書",
+    label: "提案書作成",
     icon: "📋",
-    description: "提案書・プレゼン資料・ソリューション提案",
+    description: "取引先向け提案書・プレゼン資料（成果物Blueprint）",
     popular: true,
   },
   {

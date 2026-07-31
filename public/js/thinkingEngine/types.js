@@ -27,6 +27,8 @@ export const SCENARIO = {
     WIZARD: "wizard",
     EDITS: "edits",
     TO_PAYLOAD: "to-payload",
+    GAP: "gap",
+    PROPOSAL_DELIVERABLE: "proposal-deliverable",
   },
   ANALYSIS: {
     REPORT: "report",
