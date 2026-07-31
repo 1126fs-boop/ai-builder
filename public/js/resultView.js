@@ -3,7 +3,12 @@
  */
 
 import { getCategory } from "../categories.js";
-import { buildPrompt, generateTitle, evaluatePrompt, formatStars } from "../promptBuilder.js";
+import {
+  buildPrompt,
+  generateTitle,
+  evaluatePrompt,
+  formatStars,
+} from "../promptBuilder.js";
 import {
   saveAI,
   getAI,
@@ -13,7 +18,7 @@ import {
   deleteAI,
 } from "./storage.js";
 import { state } from "./state.js";
-import { DOM, showView, showToast, copyToClipboard, showGenerating, esc } from "./ui.js";
+import { DOM, showView, showToast, copyToClipboard, showGenerating, showGeneratingStep } from "./ui.js";
 import { startCategory } from "./questionView.js";
 import { withTimeout } from "./asyncUtils.js";
 
@@ -32,45 +37,51 @@ export async function showGeneratedResult() {
   console.log(`${LOG} showGeneratedResult: start`);
   showView("result");
   showGenerating(true);
+  showGeneratingStep("プロンプトを生成中...");
 
   try {
     await withTimeout(runGeneration(), GENERATION_TIMEOUT_MS, "プロンプト生成");
     console.log(`${LOG} showGeneratedResult: complete`);
   } catch (err) {
     console.error(`${LOG} showGeneratedResult: failed`, err);
-    const message =
-      err instanceof Error ? err.message : "プロンプト生成に失敗しました。もう一度お試しください。";
-    showToast(message);
+    showToast(err instanceof Error ? err.message : "プロンプト生成に失敗しました。");
     onGoHome();
   } finally {
     showGenerating(false);
+    showGeneratingStep("");
     console.log(`${LOG} showGeneratedResult: loading dismissed`);
   }
 }
 
+/** 会議連携から結果を表示（meetingPromptView から呼ばれる） */
+export function showMeetingResult(saved) {
+  currentSavedId = saved.id;
+  state.savedPromptId = saved.id;
+  renderResult(saved);
+  showView("result");
+}
+
 async function runGeneration() {
-  console.log(`${LOG} step 1/6: animation delay`);
-  await delay(800);
-
-  console.log(`${LOG} step 2/6: build prompt`, { categoryId: state.categoryId, answers: state.answers });
-
   const category = getCategory(state.categoryId);
   if (!category) {
     throw new Error("カテゴリが見つかりません。最初からやり直してください。");
   }
 
-  const quality = evaluatePrompt(state.categoryId, state.answers);
-  console.log(`${LOG} step 3/6: quality evaluated`, { score: quality?.score, grade: quality?.grade });
+  showGeneratingStep("品質診断とプロンプト構築を実行中...");
 
-  const prompt = buildPrompt(state.categoryId, state.answers);
-  if (!prompt || !prompt.trim()) {
+  // 同期処理を並列化（UIブロック最小化）
+  const [quality, prompt] = await Promise.all([
+    Promise.resolve(evaluatePrompt(state.categoryId, state.answers)),
+    Promise.resolve(buildPrompt(state.categoryId, state.answers)),
+  ]);
+
+  if (!prompt?.trim()) {
     throw new Error("プロンプトの生成に失敗しました。");
   }
-  console.log(`${LOG} step 4/6: prompt built`, { length: prompt.length });
 
   const title = generateTitle(category.label, state.answers);
-  console.log(`${LOG} step 5/6: saving AI`, { title });
 
+  showGeneratingStep("クラウドに保存中...");
   const saved = await saveAI({
     title,
     category: state.categoryId,
@@ -80,12 +91,9 @@ async function runGeneration() {
     quality,
   });
 
-  console.log(`${LOG} step 6/6: saved`, { id: saved.id });
-
   currentSavedId = saved.id;
   state.savedPromptId = saved.id;
   addRecentAI(saved.id);
-
   renderResult(saved);
 }
 
@@ -221,11 +229,12 @@ export function goHomeFromResult() {
   onGoHome();
 }
 
-/** 長押し削除用（ライブラリから） */
 export function removeCurrentAI() {
   if (currentSavedId) deleteAI(currentSavedId);
 }
 
-function delay(ms) {
-  return new Promise((r) => setTimeout(r, ms));
+function esc(str) {
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
 }

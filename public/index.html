@@ -111,12 +111,45 @@
       </nav>
     </section>
 
+    <!-- ===== AI会議 → プロンプト連携 ===== -->
+    <section id="view-meeting-prompt" class="view" aria-label="AI会議からプロンプト生成" hidden>
+
+      <header class="wizard-header">
+        <button id="btn-cancel-meeting-prompt" class="wizard-header__back" type="button">← 戻る</button>
+        <div class="wizard-header__info">
+          <span class="wizard-header__category">AI会議連携</span>
+          <span class="wizard-header__step">内容を確認・編集してから生成</span>
+        </div>
+      </header>
+
+      <div class="meeting-prompt-form">
+        <label class="meeting-prompt-label">議題
+          <textarea id="meeting-prompt-topic" class="text-input" rows="2"></textarea>
+        </label>
+        <label class="meeting-prompt-label">要約
+          <textarea id="meeting-prompt-summary" class="text-input" rows="4"></textarea>
+        </label>
+        <label class="meeting-prompt-label">最終結論
+          <textarea id="meeting-prompt-conclusion" class="text-input" rows="5"></textarea>
+        </label>
+        <label class="meeting-prompt-label">前提条件
+          <textarea id="meeting-prompt-preconditions" class="text-input" rows="3"></textarea>
+        </label>
+        <label class="meeting-prompt-label">議論内容（詳細）
+          <textarea id="meeting-prompt-discussion" class="text-input" rows="6"></textarea>
+        </label>
+        <button id="btn-generate-from-meeting" class="btn btn--primary btn--full" type="button">この内容でプロンプト生成</button>
+      </div>
+
+    </section>
+
     <!-- ===== 結果 ===== -->
     <section id="view-result" class="view" aria-label="完成" hidden>
 
       <div id="generating-overlay" class="generating" hidden>
         <div class="generating__spinner"></div>
         <p class="generating__text">最高品質のプロンプトを生成中...</p>
+        <p id="generating-step" class="generating__step"></p>
       </div>
 
       <header class="result-header">

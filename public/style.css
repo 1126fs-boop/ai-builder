@@ -555,7 +555,29 @@ body {
 
 .generating__text { font-size: 0.9rem; color: var(--color-text-secondary); font-weight: 500; }
 
-/* ── Result ── */
+.generating__step {
+  font-size: 0.8rem;
+  color: var(--color-accent);
+  min-height: 1.2em;
+}
+
+/* ── AI会議 → プロンプト連携 ── */
+.meeting-prompt-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding-bottom: var(--spacing-lg);
+}
+
+.meeting-prompt-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
 .result-header { text-align: center; padding: var(--spacing-sm) 0; }
 
 .result-header__grade {

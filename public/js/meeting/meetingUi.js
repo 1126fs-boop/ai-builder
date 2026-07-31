@@ -51,11 +51,15 @@ export function renderRoleCard(role, selected) {
 /** 発言バブル HTML */
 export function renderMessageBubble(msg) {
   const isConclusion = msg.isConclusion;
+  const roundBadge = msg.roundLabel
+    ? `<span class="message-bubble__round">${esc(msg.roundLabel)}</span>`
+    : "";
   return `
     <article class="message-bubble${isConclusion ? " message-bubble--conclusion" : ""}" style="--role-color:${esc(msg.roleColor)}">
       <header class="message-bubble__header">
         <span class="message-bubble__icon">${msg.roleIcon}</span>
         <span class="message-bubble__name">${esc(msg.roleName)}</span>
+        ${roundBadge}
         ${isConclusion ? '<span class="message-bubble__badge">総合結論</span>' : `<span class="message-bubble__order">#${msg.order}</span>`}
       </header>
       <div class="message-bubble__body">${esc(msg.content).replace(/\n/g, "<br>")}</div>
