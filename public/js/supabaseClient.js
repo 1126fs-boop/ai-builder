@@ -61,5 +61,6 @@ export async function signOut() {
   const sb = await getSupabase();
   if (sb) await sb.auth.signOut();
   localStorage.removeItem(SAVED_EMAIL_KEY);
+  localStorage.removeItem("ai_builder_device_auth");
   window.location.href = "/login";
 }

@@ -16,11 +16,11 @@ export function mapAuthError(error: AuthError | Error | null | undefined): strin
   }
 
   if (message.includes("invalid login credentials")) {
-    return "ログインに失敗しました。別端末で登録済みの場合は確認メールのリンクをクリックしてください。";
+    return "メールアドレスまたはパスワードが正しくありません。";
   }
 
   if (message.includes("email not confirmed")) {
-    return "メールアドレスの確認が完了していません。確認メールのリンクをクリックしてください。";
+    return "メールアドレスの確認が完了していません。管理者に Supabase の Confirm email 設定を確認してください。";
   }
 
   if (
@@ -28,7 +28,7 @@ export function mapAuthError(error: AuthError | Error | null | undefined): strin
     message.includes("user already registered") ||
     message.includes("user_already_exists")
   ) {
-    return "このメールアドレスは登録済みです。確認メールを送信します。";
+    return "このメールアドレスは既に登録されています。ログイン画面からサインインしてください。";
   }
 
   if (message.includes("rate limit") || message.includes("too many requests")) {
@@ -44,18 +44,13 @@ export function mapAuthError(error: AuthError | Error | null | undefined): strin
   }
 
   if (message.includes("password") && message.includes("least")) {
-    return "パスワードの要件を満たせませんでした。管理者にお問い合わせください。";
-  }
-
-  if (message.includes("otp") && message.includes("expired")) {
-    return "ログインの有効期限が切れました。もう一度お試しください。";
+    return "パスワードは8文字以上で入力してください。";
   }
 
   if (message.includes("session") && message.includes("missing")) {
     return "セッションの有効期限が切れました。もう一度ログインしてください。";
   }
 
-  // 開発時は Console に詳細を出すため、本番でも短いヒントを返す
-  console.error("[auth/login] 未分類のエラー:", error.message, error);
-  return `ログインに失敗しました（${error.message}）`;
+  console.error("[auth] 未分類のエラー:", error.message, error);
+  return `認証に失敗しました（${error.message}）`;
 }

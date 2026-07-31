@@ -127,6 +127,10 @@
   padding: 0;
 }
 
+a.login__link {
+  display: inline;
+}
+
 .login__help {
   margin-top: 20px;
   font-size: 0.78rem;

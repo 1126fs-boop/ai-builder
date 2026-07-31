@@ -2,8 +2,7 @@
  * AI Builder v2.0 — ユーザーバー（ログアウト・管理リンク）
  */
 
-import { getCurrentUser, getProfile, signOut, isCloudEnabled, getSupabase } from "./supabaseClient.js";
-import { ensureDeviceCredentials } from "./deviceAuth.js";
+import { getCurrentUser, getProfile, signOut, isCloudEnabled } from "./supabaseClient.js";
 
 export async function initAuthBar() {
   const bar = document.getElementById("app-bar");
@@ -25,10 +24,8 @@ export async function initAuthBar() {
     return;
   }
 
-  await ensureDeviceCredentials(getSupabase, getCurrentUser);
-
   const profile = await getProfile();
-  const displayName = user.email || profile?.full_name || "ユーザー";
+  const displayName = profile?.full_name || user.email || "ユーザー";
   userEl.textContent = `${displayName}`;
 
   if (profile?.role === "admin" && adminLink) {
