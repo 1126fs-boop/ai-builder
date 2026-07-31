@@ -3,7 +3,7 @@
  * 静的アセットをキャッシュし、オフライン閲覧をサポート
  */
 
-const CACHE_NAME = "aibuilder-pwa-v5";
+const CACHE_NAME = "aibuilder-pwa-v6";
 
 const PRECACHE = [
   "/",
@@ -39,6 +39,7 @@ const PRECACHE = [
   "/js/ai/promptEnhancer.js",
   "/js/ai/meetingRoundEngine.js",
   "/js/ai/performanceProfiler.js",
+  "/js/ai/promptGenerationPipeline.js",
   "/js/meeting/meetingApp.js",
   "/js/meeting/roles.js",
   "/js/meeting/discussionEngine.js",

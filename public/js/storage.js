@@ -42,6 +42,11 @@ function storageKey(base) {
 let _cache = [];
 let _cloud = false;
 let _ready = false;
+/** @type {import("@supabase/supabase-js").SupabaseClient|null} */
+let _sessionSb = null;
+/** @type {import("@supabase/supabase-js").User|null} */
+let _sessionUser = null;
+let _recentPersistTimer = null;
 
 /**
  * @typedef {Object} SavedAI
@@ -105,6 +110,28 @@ async function persistUserPreferences(userId) {
     recent_category_ids: _recentCategoryIds,
     settings: _settings,
   });
+}
+
+/** initStorage で取得済みの Supabase / ユーザーを再利用 */
+export async function resolveCloudAuth() {
+  if (_sessionSb && _sessionUser) {
+    return { sb: _sessionSb, user: _sessionUser };
+  }
+  const sb = await getSupabase();
+  const user = await getCurrentUser();
+  if (sb) _sessionSb = sb;
+  if (user) _sessionUser = user;
+  return { sb, user };
+}
+
+function scheduleRecentPersist() {
+  if (!_cloud || !_sessionUser) return;
+  clearTimeout(_recentPersistTimer);
+  _recentPersistTimer = setTimeout(() => {
+    persistUserPreferences(_sessionUser.id).catch((err) => {
+      console.warn(`${LOG} recent persist failed`, err);
+    });
+  }, 400);
 }
 
 function generateId() {
@@ -185,6 +212,8 @@ export async function initStorage() {
 
   const sb = await getSupabase();
   const user = await getCurrentUser();
+  if (sb) _sessionSb = sb;
+  if (user) _sessionUser = user;
   if (!sb || !user) {
     _cache = [];
     _ready = true;
@@ -265,62 +294,85 @@ export async function saveAI(data) {
     isFavorite: false,
   };
 
-  if (_cloud) {
-    try {
-      console.log(`${LOG} saveAI: cloud save start`, { title: item.title, category: item.category });
-
-      const sb = await withTimeout(getSupabase(), CLOUD_TIMEOUT_MS, "Supabase 接続");
-      const user = await withTimeout(getCurrentUser(), CLOUD_TIMEOUT_MS, "ユーザー認証");
-
-      if (sb && user) {
-        console.log(`${LOG} saveAI: sending insert request`, { userId: user.id });
-
-        const { data: row, error } = await withTimeout(
-          sb
-            .from("saved_ais")
-            .insert({
-              user_id: user.id,
-              title: item.title,
-              category: item.category,
-              category_label: item.categoryLabel,
-              prompt: item.prompt,
-              answers: item.answers,
-              quality: item.quality,
-              version: item.version,
-            })
-            .select()
-            .single(),
-          CLOUD_TIMEOUT_MS,
-          "saved_ais 保存"
-        );
-
-        if (error) {
-          console.error(`${LOG} saveAI: insert error`, error);
-          throw error;
-        }
-
-        if (row) {
-          const saved = rowToItem(row);
-          _cache.unshift(saved);
-          console.log(`${LOG} saveAI: cloud save success`, { id: saved.id });
-          return saved;
-        }
-      } else {
-        console.warn(`${LOG} saveAI: Supabase client or user unavailable, using local fallback`);
-      }
-    } catch (err) {
-      console.error(`${LOG} saveAI: cloud save failed, using local fallback`, err);
-    }
-  }
-
   _cache.unshift(item);
   _cache = _cache.slice(0, MAX_SAVED);
+
+  if (_cloud) {
+    const saveStart = performance.now();
+    persistItemToCloud(item)
+      .then((saved) => {
+        const saveMs = Math.round(performance.now() - saveStart);
+        console.log(`${LOG} saveAI: background cloud sync done`, { id: saved.id, saveMs });
+      })
+      .catch((err) => {
+        console.error(`${LOG} saveAI: background cloud save failed`, err);
+      });
+    return item;
+  }
+
   write(
     KEYS.SAVED,
     _cache.map(({ isFavorite, ...rest }) => rest)
   );
   console.log(`${LOG} saveAI: local save success`, { id: item.id });
   return item;
+}
+
+/** @returns {Promise<SavedAI>} */
+async function persistItemToCloud(item) {
+  const saveStart = performance.now();
+  let networkCalls = 0;
+
+  try {
+    const { sb, user } = await resolveCloudAuth();
+    networkCalls += 1;
+
+    if (sb && user) {
+      const { data: row, error } = await withTimeout(
+        sb
+          .from("saved_ais")
+          .insert({
+            user_id: user.id,
+            title: item.title,
+            category: item.category,
+            category_label: item.categoryLabel,
+            prompt: item.prompt,
+            answers: item.answers,
+            quality: item.quality,
+            version: item.version,
+          })
+          .select()
+          .single(),
+        CLOUD_TIMEOUT_MS,
+        "saved_ais 保存"
+      );
+      networkCalls += 1;
+
+      if (error) throw error;
+
+      if (row) {
+        const saved = rowToItem(row);
+        const idx = _cache.findIndex((p) => p.id === item.id);
+        if (idx >= 0) _cache[idx] = saved;
+        const saveMs = Math.round(performance.now() - saveStart);
+        console.log(`${LOG} saveAI: cloud save success`, { id: saved.id, saveMs, networkCalls });
+        return saved;
+      }
+    }
+  } catch (err) {
+    console.error(`${LOG} saveAI: cloud save failed, keeping local cache`, err);
+    write(
+      KEYS.SAVED,
+      _cache.map(({ isFavorite, ...rest }) => rest)
+    );
+  }
+
+  return item;
+}
+
+/** @deprecated saveAI が非同期クラウド保存に対応済み */
+export function saveAIInBackground(data) {
+  return saveAI(data);
 }
 
 /** @returns {SavedAI[]} */
@@ -431,14 +483,13 @@ function removeFavoriteLocal(id) {
 
 /* ── 最近使った AI ── */
 
-export async function addRecentAI(aiId) {
+export function addRecentAI(aiId) {
   _recentIds = _recentIds.filter((id) => id !== aiId);
   _recentIds.unshift(aiId);
   _recentIds = _recentIds.slice(0, MAX_RECENT);
 
   if (_cloud) {
-    const user = await getCurrentUser();
-    if (user) await persistUserPreferences(user.id);
+    scheduleRecentPersist();
   } else {
     write(KEYS.RECENT, _recentIds);
   }

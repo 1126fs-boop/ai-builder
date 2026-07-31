@@ -3,15 +3,15 @@
  */
 
 import { loadMeetingForPrompt, clearMeetingForPrompt } from "./meeting/meetingBridge.js";
-import { buildPromptFromMeeting, generateMeetingTitle, evaluateMeetingPrompt } from "../promptBuilder.js";
+import {
+  generateMeetingPrompt,
+  toSavePayload,
+  logGenerationSummary,
+} from "./ai/promptGenerationPipeline.js";
 import { saveAI, addRecentAI } from "./storage.js";
 import { state } from "./state.js";
 import { DOM, showView, showToast, showGenerating, showGeneratingStep } from "./ui.js";
-import { withTimeout } from "./asyncUtils.js";
-import { createProfiler } from "./ai/performanceProfiler.js";
-
-const LOG = "[meetingPromptView]";
-const GENERATION_TIMEOUT_MS = 30000;
+import { yieldToMain } from "./ai/performanceProfiler.js";
 
 /** @type {object|null} */
 let currentEdits = null;
@@ -62,13 +62,12 @@ async function handleGenerate(handlers) {
 
   showView("result");
   showGenerating(true);
-  showGeneratingStep("AI会議の内容をプロンプトに変換中…");
 
   try {
-    await withTimeout(runMeetingGeneration(edits, handlers), GENERATION_TIMEOUT_MS, "プロンプト生成");
+    await runMeetingGeneration(edits, handlers);
     clearMeetingForPrompt();
   } catch (err) {
-    console.error(LOG, err);
+    console.error("[meetingPromptView]", err);
     showToast(err instanceof Error ? err.message : "生成に失敗しました");
     showView("meetingPrompt");
   } finally {
@@ -78,47 +77,47 @@ async function handleGenerate(handlers) {
 }
 
 async function runMeetingGeneration(edits, handlers) {
-  const profiler = createProfiler("会議→プロンプト生成");
-  profiler.mark("開始");
+  showGeneratingStep("AI会議の内容を読み込み中…");
+  await yieldToMain();
 
-  showGeneratingStep("品質診断とプロンプト構築を並列実行中…");
+  showGeneratingStep("プロンプトテンプレートを構築中…");
+  await yieldToMain();
 
-  const [quality, prompt] = await Promise.all([
-    Promise.resolve().then(() => {
-      showGeneratingStep("品質診断中…");
-      return evaluateMeetingPrompt(edits);
-    }),
-    Promise.resolve().then(() => {
-      showGeneratingStep("プロンプトを構築中…");
-      return buildPromptFromMeeting(edits);
-    }),
-  ]);
+  const genResult = generateMeetingPrompt(edits);
 
-  profiler.mark("プロンプト構築完了");
+  showGeneratingStep("品質診断を反映中…");
+  await yieldToMain();
 
-  if (!prompt?.trim()) {
-    throw new Error("プロンプトの生成に失敗しました。");
-  }
+  const previewSaved = {
+    id: null,
+    title: genResult.title,
+    category: genResult.category,
+    categoryLabel: genResult.categoryLabel,
+    prompt: genResult.prompt,
+    answers: genResult.answers,
+    quality: genResult.quality,
+    datetime: new Date().toISOString(),
+  };
 
-  showGeneratingStep("クラウドに保存中…");
-  const title = generateMeetingTitle(edits.topic);
-  const saved = await saveAI({
-    title,
-    category: "agent",
-    categoryLabel: "AI会議連携",
-    prompt,
-    answers: edits,
-    quality,
+  showGeneratingStep("プロンプト完成 — 結果を表示中…");
+  state.categoryId = genResult.category;
+  handlers.onComplete(previewSaved);
+
+  showGenerating(false);
+  showGeneratingStep("");
+
+  logGenerationSummary(genResult, { networkCalls: 0 });
+
+  const saveStart = performance.now();
+  saveAI(toSavePayload(genResult)).then((saved) => {
+    state.savedPromptId = saved.id;
+    addRecentAI(saved.id);
+    logGenerationSummary(genResult, {
+      networkCalls: 1,
+      saveMs: Math.round(performance.now() - saveStart),
+    });
+    showToast("クラウドへの保存が完了しました");
   });
-
-  profiler.mark("Supabase保存完了");
-  profiler.report();
-
-  state.categoryId = "agent";
-  state.savedPromptId = saved.id;
-  addRecentAI(saved.id);
-
-  handlers.onComplete(saved);
 }
 
 export function getCurrentMeetingEdits() {
