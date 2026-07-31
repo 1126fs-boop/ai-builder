@@ -96,6 +96,17 @@ if (vars.NEXT_PUBLIC_APP_URL) {
   console.log("  ℹ️  NEXT_PUBLIC_APP_URL — 未設定（ローカルでは http://localhost:3000 が使われます）");
 }
 
+const openaiKey = vars.OPENAI_API_KEY?.trim();
+if (openaiKey && !/your-openai|xxxx|placeholder/i.test(openaiKey)) {
+  console.log("  ✅ OPENAI_API_KEY — 設定済み（GPT-4o プロンプト生成が有効）");
+} else {
+  console.log("  ⚠️  OPENAI_API_KEY — 未設定（プロンプト生成はテンプレートにフォールバック）");
+}
+
+if (vars.AI_MODEL) {
+  console.log(`  ℹ️  AI_MODEL — ${vars.AI_MODEL}`);
+}
+
 console.log("");
 if (ok) {
   console.log("  すべて OK です。npm run dev で起動してログインを試してください。");
