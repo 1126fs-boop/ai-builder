@@ -24,6 +24,20 @@ export function getAITimeoutMs(): number {
   return Number.isFinite(n) && n > 0 ? n : 30000;
 }
 
+/** 出力トークン上限（品質優先・速度バランス） */
+export function getAIMaxOutputTokens(): number {
+  const raw = process.env.AI_MAX_OUTPUT_TOKENS?.trim();
+  const n = raw ? Number(raw) : 4096;
+  return Number.isFinite(n) && n >= 1024 ? Math.min(n, 8192) : 4096;
+}
+
+/** 生成温度（低め = 品質安定） */
+export function getAITemperature(): number {
+  const raw = process.env.AI_TEMPERATURE?.trim();
+  const n = raw ? Number(raw) : 0.35;
+  return Number.isFinite(n) ? Math.min(Math.max(n, 0), 1) : 0.35;
+}
+
 export function isAIConfigured(): boolean {
   return getAIProvider() === "openai" && Boolean(getOpenAIApiKey());
 }

@@ -137,7 +137,9 @@ export async function generateWizardPrompt(categoryId, answers, callbacks = {}) 
       source: "openai",
       model: apiResult.model,
       aiApiCalls: 1,
-      totalMs: null,
+      durationMs: apiResult.durationMs,
+      qualityGuard: apiResult.qualityGuard,
+      totalMs: apiResult.clientDurationMs,
       phases: [],
     });
   } catch (err) {
@@ -192,7 +194,9 @@ export async function generateMeetingPrompt(edits, callbacks = {}) {
       source: "openai",
       model: apiResult.model,
       aiApiCalls: 1,
-      totalMs: null,
+      durationMs: apiResult.durationMs,
+      qualityGuard: apiResult.qualityGuard,
+      totalMs: apiResult.clientDurationMs,
       phases: [],
     });
   } catch (err) {
@@ -215,6 +219,8 @@ function buildResult({
   source,
   model,
   aiApiCalls,
+  durationMs,
+  qualityGuard,
   totalMs,
   phases,
 }) {
@@ -230,7 +236,9 @@ function buildResult({
       networkCalls: aiApiCalls > 0 ? 1 : 0,
       source,
       model: model || null,
+      durationMs: durationMs ?? null,
       totalMs,
+      qualityGuard,
       phases: (phases || []).map((m) => ({
         name: m.name,
         elapsedMs: Math.round(m.elapsed * 10) / 10,
@@ -258,6 +266,15 @@ export function logGenerationSummary(result, saveMetrics = {}) {
   console.group("[perf] プロンプト生成サマリー");
   console.info("生成方式:", result.metrics.source, result.metrics.model || "");
   console.info("AI API呼び出し回数:", result.metrics.aiApiCalls);
+  if (result.metrics.durationMs != null) {
+    console.info("GPT-4o 生成時間:", `${result.metrics.durationMs} ms`);
+  }
+  if (result.metrics.totalMs != null) {
+    console.info("クライアント体感時間:", `${result.metrics.totalMs} ms`);
+  }
+  if (result.metrics.qualityGuard) {
+    console.info("品質ガードスコア:", result.metrics.qualityGuard.score, result.metrics.qualityGuard);
+  }
   if (result.metrics.fallback) {
     console.warn("フォールバック:", result.metrics.fallbackReason);
   }

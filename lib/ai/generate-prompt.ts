@@ -7,12 +7,15 @@ import { buildPromptEngineerSystemPrompt } from "@/lib/ai/prompt-system";
 import { buildUserMessage, type GeneratePromptRequest } from "@/lib/ai/prompt-input";
 import { createAIProvider } from "@/lib/ai/providers";
 import type { ChatMessage } from "@/lib/ai/providers/types";
+import { validateGeneratedPrompt } from "@/lib/ai/quality-guard";
 
 export type ServerGenerateResult = {
   prompt: string;
   model: string;
   provider: string;
   source: "openai";
+  durationMs: number;
+  qualityGuard: { ok: boolean; score: number; warnings: string[] };
 };
 
 export async function generatePromptWithAI(
@@ -32,14 +35,24 @@ export async function generatePromptWithAI(
   const timeoutMs = getAITimeoutMs();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const startedAt = Date.now();
 
   try {
     const result = await provider.generateStream(messages, { onDelta }, controller.signal);
+    const durationMs = Date.now() - startedAt;
+    const qualityGuard = validateGeneratedPrompt(result.prompt);
+
+    if (!qualityGuard.ok) {
+      console.warn("[generate-prompt] 品質ガード警告:", qualityGuard.warnings);
+    }
+
     return {
       prompt: result.prompt,
       model: result.model,
       provider: result.provider,
       source: "openai",
+      durationMs,
+      qualityGuard,
     };
   } catch (err) {
     if (controller.signal.aborted) {

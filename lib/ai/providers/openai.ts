@@ -2,7 +2,7 @@
  * OpenAI Chat Completions（GPT-4o）— ストリーミング対応
  */
 
-import { getAIModel, getOpenAIApiKey } from "@/lib/ai/env";
+import { getAIModel, getOpenAIApiKey, getAIMaxOutputTokens, getAITemperature } from "@/lib/ai/env";
 import type { AIProvider, ChatMessage, GenerateResult, StreamCallbacks } from "@/lib/ai/providers/types";
 
 type OpenAIStreamChunk = {
@@ -35,7 +35,8 @@ export class OpenAIProvider implements AIProvider {
       body: JSON.stringify({
         model,
         messages,
-        temperature: 0.4,
+        temperature: getAITemperature(),
+        max_tokens: getAIMaxOutputTokens(),
         stream: true,
       }),
       signal,
