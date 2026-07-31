@@ -94,21 +94,31 @@ export function buildMeetingTransferPayload(meetingResult) {
   return result.output;
 }
 
-/** 提案書 — ギャップ分析 */
+/** 提案書 — ギャップ分析（後方互換） */
 export function analyzeProposalGaps(answers) {
+  return analyzeDeliverableGaps("proposal", answers);
+}
+
+/** 全 Blueprint カテゴリ — ギャップ分析 */
+export function analyzeDeliverableGaps(categoryId, answers) {
   return runThinking({
     client: CLIENT.PROMPT,
     scenario: SCENARIO.PROMPT.GAP,
-    input: { answers },
+    input: { categoryId, answers },
   });
 }
 
-/** 提案書 — 成果物生成（Blueprint v1） */
+/** 提案書 — 成果物生成（後方互換） */
 export function buildProposalDeliverable(answers) {
+  return buildDeliverable("proposal", answers);
+}
+
+/** 全 Blueprint カテゴリ — 成果物生成 */
+export function buildDeliverable(categoryId, answers) {
   return runThinking({
     client: CLIENT.PROMPT,
-    scenario: SCENARIO.PROMPT.PROPOSAL_DELIVERABLE,
-    input: { answers },
+    scenario: SCENARIO.PROMPT.DELIVERABLE,
+    input: { categoryId, answers },
   });
 }
 

@@ -11,9 +11,9 @@
 export const CATEGORIES = [
   {
     id: "sales",
-    label: "営業",
+    label: "営業トーク",
     icon: "💼",
-    description: "商談・テレアポ・DM・LINE など BtoB 営業",
+    description: "商談・テレアポ・DM・LINE など、そのまま使える営業台本",
     popular: true,
   },
   {
@@ -25,9 +25,9 @@ export const CATEGORIES = [
   },
   {
     id: "newsletter",
-    label: "メルマガ",
+    label: "メルマガ・LINE",
     icon: "📧",
-    description: "取引先サロン向けメール・フォロー",
+    description: "取引先向けメール・LINE配信文（件名・本文・CTA）",
     popular: true,
   },
   {
@@ -39,16 +39,16 @@ export const CATEGORIES = [
   },
   {
     id: "sns",
-    label: "SNS",
+    label: "SNS投稿画像",
     icon: "📱",
-    description: "サロン向け販促・集客 SNS コンテンツ",
+    description: "Instagram/LINE向け画像＋キャプション＋生成プロンプト",
     popular: false,
   },
   {
     id: "image",
-    label: "販促・POP",
+    label: "POP・販促物",
     icon: "🎨",
-    description: "POP・店内貼り・販促ビジュアル（公式HP商品参照）",
+    description: "店内POP・販促ビジュアル（文案＋レイアウト＋画像プロンプト）",
     popular: false,
   },
   {

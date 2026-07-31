@@ -34,8 +34,11 @@
  * @property {string} categoryId
  * @property {string} label
  * @property {SchemaQuestion[]} seedQuestions
+ * @property {Record<string, SchemaQuestion>} dynamicQuestions
  * @property {DynamicRule[]} dynamicRules
  * @property {number} maxDynamicQuestions
+ * @property {(answers: Object) => Object} [inferDefaults]
+ * @property {(answers: Object, pendingDynamic: number) => number} [estimateQuality]
  */
 
 /**

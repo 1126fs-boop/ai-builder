@@ -14,7 +14,28 @@ import {
   DEFAULT_EVALUATION_CRITERIA,
 } from "../domainKnowledge.js";
 import { assembleThinkingResult } from "../core/thinkingCore.js";
-import { runProposalGapAnalysis, runProposalPipeline } from "../core/pipeline/proposalPipeline.js";
+import { runGapAnalysis } from "../schemas/index.js";
+import { runDeliverablePipeline } from "../core/pipeline/deliverablePipeline.js";
+
+/** ギャップ分析（Dynamic 質問決定）— 全 Blueprint カテゴリ対応 */
+export function runDeliverableGap({ categoryId, answers }) {
+  return runGapAnalysis(categoryId, answers);
+}
+
+/** 後方互換 */
+export function runProposalGap({ answers }) {
+  return runGapAnalysis("proposal", answers);
+}
+
+/** 成果物 Blueprint + 完成プロンプト — 全 Blueprint カテゴリ対応 */
+export function runDeliverable({ categoryId, answers }) {
+  return runDeliverablePipeline(categoryId, answers);
+}
+
+/** 後方互換 */
+export function runProposalDeliverable({ answers }) {
+  return runDeliverablePipeline("proposal", answers);
+}
 
 function extractMissingInfo(categoryId, answers) {
   const questions = getQuestions(categoryId);
@@ -170,12 +191,3 @@ export function runToPayload({ thinking, extras = {} }) {
   };
 }
 
-/** 提案書 — ギャップ分析（Dynamic 質問決定） */
-export function runProposalGap({ answers }) {
-  return runProposalGapAnalysis(answers);
-}
-
-/** 提案書 — 成果物 Blueprint + 完成プロンプト */
-export function runProposalDeliverable({ answers }) {
-  return runProposalPipeline(answers);
-}
