@@ -19,31 +19,12 @@ import {
   DEFAULT_THINKING_PROCESS,
   DEFAULT_EVALUATION_CRITERIA,
 } from "./js/ai/promptEnhancer.js";
-
-/** 経営課題 → 訴求インパクトのマッピング */
-const CHALLENGE_IMPACT = {
-  "売上アップ": "月商10〜30%の売上向上",
-  "集客改善": "新規来店数・予約数の増加",
-  "客単価アップ": "1回あたりの平均単価アップ",
-  "リピート率向上": "リピート率・来店頻度の改善",
-  "業務効率化": "施術時間短縮・スタッフ負担の軽減",
-  "スタッフ育成・採用": "スタッフ定着率・技術力の向上",
-  "メニュー強化": "新メニューによる客単価・差別化",
-};
-
-/** 業種別の営業コンテキスト（具体性を高める） */
-const INDUSTRY_CONTEXT = {
-  "エステサロン": "施術メニュー構成・リピート率・スタッフ稼働率が経営の要",
-  "美容室": "カット単価・カラー比率・指名率・店販売上が重要指標",
-  "ネイルサロン": "デザイン単価・来店頻度・SNS集客・指名率が課題になりやすい",
-  "アイラッシュサロン": "リピート周期・技術差別化・予約枠の埋まり方が売上を左右",
-  "整体院": "新規獲得・継続率・物販・スタッフ採用が経営課題の中心",
-  "整骨院・接骨院": "保険診療比率・自費メニュー・新規患者獲得が重要",
-  "鍼灸院": "リピート率・自費メニュー・地域集客・スタッフ確保が焦点",
-  "クリニック": "客単価・リピート・物販・スタッフ教育・差別化が経営の鍵",
-  "リラクゼーションサロン": "新規集客・リピート・単価設計・スタッフ定着が課題",
-  "フィットネス・ジム": "入会率・継続率・物販・スタッフ採用がKPI",
-};
+import {
+  BASE_RULES,
+  CHALLENGE_IMPACT,
+  INDUSTRY_CONTEXT,
+  FORMAT_INSTRUCTIONS,
+} from "./js/thinkingEngine/domainKnowledge.js";
 
 /** 営業種別ごとの出力要件 */
 const SALES_TYPE_RULES = {
@@ -55,52 +36,35 @@ const SALES_TYPE_RULES = {
   "LINE": "短文・改行多め。既読されやすいトーン。CTAは1つに絞る",
 };
 
-/** 出力形式別の詳細指示 */
-const FORMAT_INSTRUCTIONS = {
-  "営業台本": "【導入（共感）】→【課題確認】→【ソリューション提示】→【具体的メリット】→【CTA】の順で台本形式",
-  "DM文案": "140〜300字。1行目で課題に触れ、中盤で価値提示、末尾にCTA。絵文字は控えめ",
-  "LINE文案": "カジュアルだがプロフェッショナル。短い段落。読了30秒以内",
-  "メール文案": "件名3パターン + 本文。宛名・署名欄のプレースホルダー付き",
-  "箇条書き": "見出し + 箇条書き5〜8項目。各項目1〜2行",
-  "表": "Markdown表形式。項目・現状・提案・期待効果の列",
-  "スライド構成": "スライド1枚=1メッセージ。タイトル + 箇条書き3点",
-  "提案書全文": "エグゼクティブサマリー + 現状分析 + 提案 + 効果 + 導入ステップ",
-};
+/** 思考エンジン結果（buildPrompt 実行中のみ参照） */
+let _activeThinking = null;
 
 /**
- * 構造化プロンプトを組み立て（高品質版）
+ * 構造化プロンプトを組み立て（思考エンジン連携）
  */
-function structured({ role, mission, context, rules, format, tone, example, purpose, target, prerequisites, notes }) {
+function structured({ role, mission, context, rules, format, tone, example, purpose, target, prerequisites, notes, thinking }) {
+  const t = thinking || _activeThinking;
   const industry = context?.includes("取引先業種") ? context.match(/取引先業種: ([^\n]+)/)?.[1] : null;
   return structuredPro({
     role,
     mission,
-    purpose: purpose || mission,
+    purpose: t?.purpose || purpose || mission,
     background: "美容BtoBソリューション営業。商品ではなく経営課題解決が主目的。",
     target: target || (industry ? `${industry}のオーナー・院長` : "美容サロン・クリニックの経営者"),
     prerequisites: prerequisites || "株式会社ワムのソリューション営業原則に準拠",
-    constraints: "商品スペック押し売り禁止 / 経営課題起点 / 具体数字を【】で明示可",
+    constraints: t?.constraints || "商品スペック押し売り禁止 / 経営課題起点 / 具体数字を【】で明示可",
     context,
     rules,
-    thinkingProcess: DEFAULT_THINKING_PROCESS,
-    outputFormat: format,
-    evaluationCriteria: DEFAULT_EVALUATION_CRITERIA,
-    improvementPoints: "不足情報は【】プレースホルダーで明示し、営業担当者が埋められるようにする",
-    notes: notes || "架空の数字・店舗名は【】で明示する。競合他社名は出さない。",
+    thinkingProcess: t?.thinkingProcess || DEFAULT_THINKING_PROCESS,
+    outputFormat: t?.outputFormat || format,
+    evaluationCriteria: t?.evaluationCriteria || DEFAULT_EVALUATION_CRITERIA,
+    improvementPoints: t?.improvements?.join("\n") || "不足情報は【】プレースホルダーで明示し、営業担当者が埋められるようにする",
+    notes: [notes, t?.notes].filter(Boolean).join("\n") || "架空の数字・店舗名は【】で明示する。競合他社名は出さない。",
     examples: example || "Before/Afterの数字例を1つ以上含める",
     expectedOutput: "営業担当者がChatGPT等に貼り付けて即使用できる完成プロンプト",
     tone: tone || "プロフェッショナルで現場感のある日本語",
   });
 }
-
-/** 共通ルール */
-const BASE_RULES = [
-  "商品スペック・カタログ説明から始めない。必ず経営課題への共感から入る",
-  "「導入後の具体的インパクト（数字・Before/After）」を必ず含める",
-  "サロンオーナー・院長の立場に立った言葉遣いにする",
-  "AIっぽい表現（「〜についてご説明します」等）は使わない",
-  "営業担当者がそのまま使える完成度で出力する",
-];
 
 function impactLine(challenge) {
   const impact = CHALLENGE_IMPACT[challenge] || "経営課題の解決";
@@ -275,11 +239,17 @@ const PROMPT_BUILDERS = {
  * 完成プロンプトを生成
  * @param {string} categoryId
  * @param {Object<string,string>} answers
+ * @param {Object} [thinking] — 思考エンジン結果
  */
-export function buildPrompt(categoryId, answers) {
+export function buildPrompt(categoryId, answers, thinking = null) {
   const builder = PROMPT_BUILDERS[categoryId];
   if (!builder) return wrapPrompt("プロンプトを生成できませんでした。");
-  return builder(answers);
+  _activeThinking = thinking;
+  try {
+    return builder(answers);
+  } finally {
+    _activeThinking = null;
+  }
 }
 
 /**

@@ -13,9 +13,9 @@ import {
   generateMeetingTitle,
 } from "../../promptBuilder.js";
 import { diagnoseQuality } from "../../qualityEngine.js";
-import { buildMeetingPromptPayload } from "./promptEnhancer.js";
+import { buildMeetingPromptPayload, structuredPro } from "./promptEnhancer.js";
 import { wrapPrompt } from "../../context.js";
-import { structuredPro } from "./promptEnhancer.js";
+import { analyzeForWizard } from "../thinkingEngine/index.js";
 
 /** @typedef {"template"|"openai"} PromptProviderId */
 
@@ -38,9 +38,12 @@ export async function generateWizardViaProvider(categoryId, answers, callbacks =
     throw new Error("カテゴリが見つかりません。最初からやり直してください。");
   }
 
+  callbacks.onStep?.("思考エンジンで内容を整理中…");
+  const thinking = analyzeForWizard(categoryId, answers);
+
   callbacks.onStep?.("プロンプトを生成中…");
   const quality = diagnoseQuality(categoryId, answers);
-  const prompt = buildPrompt(categoryId, answers);
+  const prompt = buildPrompt(categoryId, answers, thinking);
 
   if (!prompt?.trim()) {
     throw new Error("プロンプトの生成に失敗しました。");
@@ -82,7 +85,7 @@ export async function generateMeetingViaProvider(edits, callbacks = {}) {
     throw new Error("議題を入力してください。");
   }
 
-  callbacks.onStep?.("AI会議の内容を整理中…");
+  callbacks.onStep?.("思考エンジンで内容を整理中…");
   const payload = buildMeetingPromptPayload(edits);
   callbacks.onStep?.("プロンプトを生成中…");
 
