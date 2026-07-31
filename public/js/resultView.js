@@ -4,8 +4,6 @@
 
 import { getCategory } from "../categories.js";
 import {
-  buildPrompt,
-  generateTitle,
   evaluatePrompt,
   formatStars,
 } from "../promptBuilder.js";
@@ -20,11 +18,14 @@ import {
 import { state } from "./state.js";
 import { DOM, showView, showToast, copyToClipboard, showGenerating, showGeneratingStep } from "./ui.js";
 import { startCategory } from "./questionView.js";
-import { withTimeout } from "./asyncUtils.js";
-import { createProfiler } from "./ai/performanceProfiler.js";
+import {
+  generateWizardPrompt,
+  toSavePayload,
+  logGenerationSummary,
+} from "./ai/promptGenerationPipeline.js";
+import { yieldToMain } from "./ai/performanceProfiler.js";
 
 const LOG = "[resultView]";
-const GENERATION_TIMEOUT_MS = 30000;
 
 let onGoHome = () => {};
 let currentSavedId = null;
@@ -38,10 +39,10 @@ export async function showGeneratedResult() {
   console.log(`${LOG} showGeneratedResult: start`);
   showView("result");
   showGenerating(true);
-  showGeneratingStep("プロンプトを生成中...");
+  showGeneratingStep("プロンプトを準備中…");
 
   try {
-    await withTimeout(runGeneration(), GENERATION_TIMEOUT_MS, "プロンプト生成");
+    await runGeneration();
     console.log(`${LOG} showGeneratedResult: complete`);
   } catch (err) {
     console.error(`${LOG} showGeneratedResult: failed`, err);
@@ -63,46 +64,49 @@ export function showMeetingResult(saved) {
 }
 
 async function runGeneration() {
-  const profiler = createProfiler("ウィザード→プロンプト生成");
-  profiler.mark("開始");
+  showGeneratingStep("回答内容を整理中…");
+  await yieldToMain();
 
-  const category = getCategory(state.categoryId);
-  if (!category) {
-    throw new Error("カテゴリが見つかりません。最初からやり直してください。");
-  }
+  showGeneratingStep("プロンプトテンプレートを構築中…");
+  await yieldToMain();
 
-  showGeneratingStep("品質診断とプロンプト構築を並列実行中…");
+  const genResult = generateWizardPrompt(state.categoryId, state.answers);
 
-  const [quality, prompt] = await Promise.all([
-    Promise.resolve(evaluatePrompt(state.categoryId, state.answers)),
-    Promise.resolve(buildPrompt(state.categoryId, state.answers)),
-  ]);
+  showGeneratingStep("品質診断を反映中…");
+  await yieldToMain();
 
-  profiler.mark("プロンプト構築完了");
+  const previewSaved = {
+    id: null,
+    title: genResult.title,
+    category: genResult.category,
+    categoryLabel: genResult.categoryLabel,
+    prompt: genResult.prompt,
+    answers: genResult.answers,
+    quality: genResult.quality,
+    datetime: new Date().toISOString(),
+  };
 
-  if (!prompt?.trim()) {
-    throw new Error("プロンプトの生成に失敗しました。");
-  }
+  currentSavedId = null;
+  state.savedPromptId = null;
+  state.categoryId = genResult.category;
 
-  const title = generateTitle(category.label, state.answers);
+  showGeneratingStep("プロンプト完成 — 結果を表示中…");
+  renderResult(previewSaved);
 
-  showGeneratingStep("クラウドに保存中…");
-  const saved = await saveAI({
-    title,
-    category: state.categoryId,
-    categoryLabel: category.label,
-    prompt,
-    answers: { ...state.answers },
-    quality,
+  logGenerationSummary(genResult, { networkCalls: 0 });
+
+  const saveStart = performance.now();
+  saveAI(toSavePayload(genResult)).then((saved) => {
+    currentSavedId = saved.id;
+    state.savedPromptId = saved.id;
+    addRecentAI(saved.id);
+    updateFavoriteButton(saved.id);
+    logGenerationSummary(genResult, {
+      networkCalls: 1,
+      saveMs: Math.round(performance.now() - saveStart),
+    });
+    showToast("クラウドへの保存が完了しました");
   });
-
-  profiler.mark("Supabase保存完了");
-  profiler.report();
-
-  currentSavedId = saved.id;
-  state.savedPromptId = saved.id;
-  addRecentAI(saved.id);
-  renderResult(saved);
 }
 
 /** 共通テンプレートから結果画面を開く */
