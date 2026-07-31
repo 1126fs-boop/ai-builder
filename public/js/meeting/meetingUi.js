@@ -66,6 +66,63 @@ export function renderMessageBubble(msg) {
     </article>`;
 }
 
+/** 発言バブルをDOMに追加（innerHTMLより高速・安全） */
+export function appendMessageBubble(container, msg) {
+  const isConclusion = msg.isConclusion;
+  const article = document.createElement("article");
+  article.className = `message-bubble${isConclusion ? " message-bubble--conclusion" : ""}`;
+  article.style.setProperty("--role-color", msg.roleColor);
+
+  const header = document.createElement("header");
+  header.className = "message-bubble__header";
+
+  const icon = document.createElement("span");
+  icon.className = "message-bubble__icon";
+  icon.textContent = msg.roleIcon;
+
+  const name = document.createElement("span");
+  name.className = "message-bubble__name";
+  name.textContent = msg.roleName;
+
+  header.append(icon, name);
+
+  if (msg.roundLabel) {
+    const round = document.createElement("span");
+    round.className = "message-bubble__round";
+    round.textContent = msg.roundLabel;
+    header.appendChild(round);
+  }
+
+  if (isConclusion) {
+    const badge = document.createElement("span");
+    badge.className = "message-bubble__badge";
+    badge.textContent = "総合結論";
+    header.appendChild(badge);
+  } else {
+    const order = document.createElement("span");
+    order.className = "message-bubble__order";
+    order.textContent = `#${msg.order}`;
+    header.appendChild(order);
+  }
+
+  const body = document.createElement("div");
+  body.className = "message-bubble__body";
+  body.textContent = msg.content;
+
+  article.append(header, body);
+  container.appendChild(article);
+  return article;
+}
+
+/** スクロールを間引いて描画負荷を下げる */
+let scrollRaf = 0;
+export function scrollThreadToLatest(container) {
+  cancelAnimationFrame(scrollRaf);
+  scrollRaf = requestAnimationFrame(() => {
+    container.lastElementChild?.scrollIntoView({ behavior: "auto", block: "nearest" });
+  });
+}
+
 /** 履歴リスト項目 HTML */
 export function renderHistoryItem(meeting) {
   const participantCount = meeting.selectedRoleNames?.length ?? meeting.selectedRoleIds?.length ?? 0;

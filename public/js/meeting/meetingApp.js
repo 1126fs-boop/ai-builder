@@ -18,8 +18,11 @@ import {
   showMeetingView,
   renderRoleCard,
   renderMessageBubble,
+  appendMessageBubble,
+  scrollThreadToLatest,
   renderHistoryItem,
 } from "./meetingUi.js";
+import { buildMeetingTransferPayload } from "../ai/contentFramework.js";
 import { initAuthBar } from "../authBar.js";
 
 /** @type {Set<string>} */
@@ -134,11 +137,18 @@ function openHistoryDetail(id) {
   showMeetingView("history-detail");
 }
 
+function setMeetingStatus(text, active = true) {
+  const el = DOM.meetingStatus();
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle("discussion-header__status--active", active);
+}
+
 function renderDiscussionMessage(msg) {
   const thread = DOM.discussionThread();
   if (!thread) return;
-  thread.insertAdjacentHTML("beforeend", renderMessageBubble(msg));
-  thread.lastElementChild?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  appendMessageBubble(thread, msg);
+  scrollThreadToLatest(thread);
 }
 
 async function startMeeting() {
@@ -161,14 +171,13 @@ async function startMeeting() {
   const thread = DOM.discussionThread();
   if (thread) thread.innerHTML = "";
   DOM.meetingTopicDisplay()?.replaceChildren(document.createTextNode(topic));
-  DOM.meetingStatus()?.replaceChildren(document.createTextNode("AIが議論中です..."));
+  setMeetingStatus("AI会議を開始しています…");
   DOM.btnSave()?.setAttribute("hidden", "");
   DOM.btnGeneratePrompt()?.setAttribute("hidden", "");
 
   showMeetingView("discussion");
 
-  /** @type {object[]} */
-  const messages = [];
+  /** @type {object|null} */
   let conclusion = null;
 
   try {
@@ -179,19 +188,24 @@ async function startMeeting() {
         renderDiscussionMessage(msg);
         if (msg.isConclusion) {
           conclusion = msg;
-          DOM.meetingStatus()?.replaceChildren(document.createTextNode("議論が完了しました"));
-        } else {
-          messages.push(msg);
+          setMeetingStatus("議論が完了しました", false);
         }
       },
-      (status) => {
-        DOM.meetingStatus()?.replaceChildren(document.createTextNode(status));
-      },
-      100
+      (status) => setMeetingStatus(status),
+      {
+        onRoleProgress: ({ role, phase }) => {
+          if (!role) return;
+          if (phase === "integrating") {
+            setMeetingStatus("ファシリテーターが統合中…");
+          } else {
+            setMeetingStatus(`${role.name}が分析中…`);
+          }
+        },
+      }
     );
 
     conclusion = result.conclusion;
-    currentMeetingResult = {
+    const meetingData = {
       title: topic,
       selectedRoleIds: [...selectedRoleIds],
       selectedRoleNames: [...selectedRoleIds]
@@ -200,6 +214,8 @@ async function startMeeting() {
       messages: result.messages,
       conclusion: result.conclusion,
     };
+    const transferPayload = buildMeetingTransferPayload(meetingData);
+    currentMeetingResult = { ...meetingData, transferPayload };
 
     DOM.btnSave()?.removeAttribute("hidden");
     DOM.btnGeneratePrompt()?.removeAttribute("hidden");
@@ -207,7 +223,7 @@ async function startMeeting() {
   } catch (err) {
     console.error("[meeting]", err);
     showToast("会議中にエラーが発生しました");
-    DOM.meetingStatus()?.replaceChildren(document.createTextNode("エラーが発生しました"));
+    setMeetingStatus("エラーが発生しました", false);
   } finally {
     isRunning = false;
     updateStartButton();
@@ -240,7 +256,7 @@ function handleGeneratePrompt() {
     showToast("会議結果がありません");
     return;
   }
-  saveMeetingForPrompt(currentMeetingResult);
+  saveMeetingForPrompt(currentMeetingResult, currentMeetingResult.transferPayload);
   navigateToPromptGeneration();
 }
 

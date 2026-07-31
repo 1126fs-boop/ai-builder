@@ -21,6 +21,7 @@ import { state } from "./state.js";
 import { DOM, showView, showToast, copyToClipboard, showGenerating, showGeneratingStep } from "./ui.js";
 import { startCategory } from "./questionView.js";
 import { withTimeout } from "./asyncUtils.js";
+import { createProfiler } from "./ai/performanceProfiler.js";
 
 const LOG = "[resultView]";
 const GENERATION_TIMEOUT_MS = 30000;
@@ -62,18 +63,22 @@ export function showMeetingResult(saved) {
 }
 
 async function runGeneration() {
+  const profiler = createProfiler("ウィザード→プロンプト生成");
+  profiler.mark("開始");
+
   const category = getCategory(state.categoryId);
   if (!category) {
     throw new Error("カテゴリが見つかりません。最初からやり直してください。");
   }
 
-  showGeneratingStep("品質診断とプロンプト構築を実行中...");
+  showGeneratingStep("品質診断とプロンプト構築を並列実行中…");
 
-  // 同期処理を並列化（UIブロック最小化）
   const [quality, prompt] = await Promise.all([
     Promise.resolve(evaluatePrompt(state.categoryId, state.answers)),
     Promise.resolve(buildPrompt(state.categoryId, state.answers)),
   ]);
+
+  profiler.mark("プロンプト構築完了");
 
   if (!prompt?.trim()) {
     throw new Error("プロンプトの生成に失敗しました。");
@@ -81,7 +86,7 @@ async function runGeneration() {
 
   const title = generateTitle(category.label, state.answers);
 
-  showGeneratingStep("クラウドに保存中...");
+  showGeneratingStep("クラウドに保存中…");
   const saved = await saveAI({
     title,
     category: state.categoryId,
@@ -90,6 +95,9 @@ async function runGeneration() {
     answers: { ...state.answers },
     quality,
   });
+
+  profiler.mark("Supabase保存完了");
+  profiler.report();
 
   currentSavedId = saved.id;
   state.savedPromptId = saved.id;

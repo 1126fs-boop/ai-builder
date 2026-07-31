@@ -11,6 +11,7 @@ import {
   pickStance,
   STANCE_LABELS,
 } from "./contentFramework.js";
+import { createProfiler, yieldToMain } from "./performanceProfiler.js";
 
 const ROLE_EXPERTISE = {
   sales_director: { focus: "営業組織・KPI・再現性", example: "週次パイプライン管理で商談化率15%改善", risk: "属人化" },
@@ -107,24 +108,52 @@ export function generateDeepConclusion(topic, messages) {
   };
 }
 
-export async function runDeepMeeting(topic, discussionRoles, onMessage, onProgress, delayMs = 100) {
+/**
+ * 3ラウンド深層議論を実行
+ * @param {string} topic
+ * @param {object[]} discussionRoles
+ * @param {(msg: object) => void} onMessage
+ * @param {(status: string) => void} [onProgress]
+ * @param {{ onRoleProgress?: (info: { role: object, round: number, phase: string }) => void, yieldPerMessage?: boolean }} [options]
+ */
+export async function runDeepMeeting(topic, discussionRoles, onMessage, onProgress, options = {}) {
+  const { onRoleProgress, yieldPerMessage = true } =
+    typeof options === "number" ? { yieldPerMessage: true } : options;
+
+  const profiler = createProfiler("AI会議");
+  profiler.mark("開始");
+
   const messages = [];
+
   for (let round = 1; round <= MIN_DISCUSSION_ROUNDS; round++) {
     onProgress?.(ROUND_TYPES[round].label);
+    profiler.mark(`ラウンド${round} 開始`);
+
     for (const role of discussionRoles) {
-      await sleep(delayMs);
+      onRoleProgress?.({ role, round, phase: "analyzing" });
+      onProgress?.(`${role.name}が分析中…`);
+
       const opinion = generateRoundOpinion(role, topic, round, messages);
       messages.push(opinion);
+
+      onRoleProgress?.({ role, round, phase: "displaying" });
       onMessage(opinion);
+
+      if (yieldPerMessage) await yieldToMain();
     }
+
+    profiler.mark(`ラウンド${round} 完了`);
   }
-  onProgress?.("ファシリテーターが総合結論をまとめています...");
-  await sleep(delayMs);
+
+  const facilitator = getFacilitatorRole();
+  onRoleProgress?.({ role: facilitator, round: MIN_DISCUSSION_ROUNDS + 1, phase: "integrating" });
+  onProgress?.("ファシリテーターが統合中…");
+
   const conclusion = generateDeepConclusion(topic, messages);
   onMessage(conclusion);
-  return { messages, conclusion };
-}
 
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
+  profiler.mark("ファシリテーター統合完了");
+  profiler.report();
+
+  return { messages, conclusion };
 }
