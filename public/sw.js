@@ -3,7 +3,7 @@
  * 静的アセットをキャッシュし、オフライン閲覧をサポート
  */
 
-const CACHE_NAME = "aibuilder-pwa-v10";
+const CACHE_NAME = "aibuilder-pwa-v11";
 
 const PRECACHE = [
   "/",
@@ -53,6 +53,12 @@ const PRECACHE = [
 function isNetworkFirstAsset(url) {
   return /\.(?:js|css)$/.test(url.pathname);
 }
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

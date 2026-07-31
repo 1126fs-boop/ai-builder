@@ -109,7 +109,7 @@ export function renderEmpty(container, message, icon = "📭") {
   container.innerHTML = `<div class="empty-state"><span class="empty-state__icon">${icon}</span><p>${message}</p></div>`;
 }
 
-/** 生成中オーバーレイ */
+/** 生成中オーバーレイ（CSS キャッシュに依存せず確実に表示/非表示） */
 export function showGenerating(show) {
   const el = DOM.generatingOverlay;
   if (!el) {
@@ -117,9 +117,13 @@ export function showGenerating(show) {
     return;
   }
   el.hidden = !show;
+  // 旧 CSS（display:flex が hidden を上書き）がキャッシュされていても確実に消す
+  el.style.display = show ? "flex" : "none";
   el.setAttribute("aria-busy", show ? "true" : "false");
   el.classList.toggle("generating--active", show);
-  console.log(`[ui] showGenerating(${show}) hidden=${el.hidden} display=${getComputedStyle(el).display}`);
+  console.log(
+    `[ui] showGenerating(${show}) hidden=${el.hidden} style.display=${el.style.display} computed=${getComputedStyle(el).display}`
+  );
 }
 
 /** 生成ステップ表示 */
