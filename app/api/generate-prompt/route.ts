@@ -43,6 +43,9 @@ export async function POST(request: Request) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      const startedAt = Date.now();
+      controller.enqueue(sseEvent({ type: "start", model: "gpt-4o" }));
+
       try {
         const result = await generatePromptWithAI(payload, (delta) => {
           controller.enqueue(sseEvent({ type: "delta", text: delta }));
@@ -55,11 +58,20 @@ export async function POST(request: Request) {
             model: result.model,
             provider: result.provider,
             source: result.source,
+            durationMs: result.durationMs,
+            qualityGuard: result.qualityGuard,
           })
         );
       } catch (err) {
         const message = err instanceof Error ? err.message : "プロンプト生成に失敗しました";
-        controller.enqueue(sseEvent({ type: "error", error: message, fallback: true }));
+        controller.enqueue(
+          sseEvent({
+            type: "error",
+            error: message,
+            fallback: true,
+            durationMs: Date.now() - startedAt,
+          })
+        );
       } finally {
         controller.close();
       }
