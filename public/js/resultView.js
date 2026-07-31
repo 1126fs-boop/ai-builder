@@ -39,7 +39,7 @@ export async function showGeneratedResult() {
   console.log(`${LOG} showGeneratedResult: start`);
   showView("result");
   showGenerating(true);
-  showGeneratingStep("プロンプトを準備中…");
+  showGeneratingStep("プロンプト生成を準備中…");
 
   try {
     await runGeneration();
@@ -67,13 +67,28 @@ async function runGeneration() {
   showGeneratingStep("回答内容を整理中…");
   await yieldToMain();
 
-  showGeneratingStep("プロンプトテンプレートを構築中…");
-  await yieldToMain();
+  // 結果画面を先に表示（ストリーミング先）
+  currentSavedId = null;
+  state.savedPromptId = null;
+  DOM.promptOutput.textContent = "";
 
-  const genResult = generateWizardPrompt(state.categoryId, state.answers);
+  let streamedText = "";
+  let overlayDismissed = false;
 
-  showGeneratingStep("品質診断を反映中…");
-  await yieldToMain();
+  const genResult = await generateWizardPrompt(state.categoryId, state.answers, {
+    onStep: (step) => showGeneratingStep(step),
+    onDelta: (text) => {
+      if (!overlayDismissed) {
+        showGenerating(false);
+        overlayDismissed = true;
+      }
+      streamedText += text;
+      DOM.promptOutput.textContent = streamedText;
+      DOM.promptOutput.scrollTop = DOM.promptOutput.scrollHeight;
+    },
+  });
+
+  state.categoryId = genResult.category;
 
   const previewSaved = {
     id: null,
@@ -86,14 +101,15 @@ async function runGeneration() {
     datetime: new Date().toISOString(),
   };
 
-  currentSavedId = null;
-  state.savedPromptId = null;
-  state.categoryId = genResult.category;
+  if (genResult.metrics.fallback) {
+    showToast("GPT-4o を利用できないため、テンプレートで生成しました");
+  } else {
+    showToast("GPT-4o でプロンプトを生成しました");
+  }
 
-  showGeneratingStep("プロンプト完成 — 結果を表示中…");
+  showGeneratingStep("");
   renderResult(previewSaved);
-
-  logGenerationSummary(genResult, { networkCalls: 0 });
+  logGenerationSummary(genResult, { networkCalls: genResult.metrics.aiApiCalls });
 
   const saveStart = performance.now();
   saveAI(toSavePayload(genResult)).then((saved) => {
@@ -102,7 +118,7 @@ async function runGeneration() {
     addRecentAI(saved.id);
     updateFavoriteButton(saved.id);
     logGenerationSummary(genResult, {
-      networkCalls: 1,
+      networkCalls: genResult.metrics.aiApiCalls + 1,
       saveMs: Math.round(performance.now() - saveStart),
     });
     showToast("クラウドへの保存が完了しました");

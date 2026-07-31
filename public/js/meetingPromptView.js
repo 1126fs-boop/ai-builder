@@ -62,6 +62,7 @@ async function handleGenerate(handlers) {
 
   showView("result");
   showGenerating(true);
+  showGeneratingStep("AI会議の内容を読み込み中…");
 
   try {
     await runMeetingGeneration(edits, handlers);
@@ -77,16 +78,25 @@ async function handleGenerate(handlers) {
 }
 
 async function runMeetingGeneration(edits, handlers) {
-  showGeneratingStep("AI会議の内容を読み込み中…");
   await yieldToMain();
 
-  showGeneratingStep("プロンプトテンプレートを構築中…");
-  await yieldToMain();
+  DOM.promptOutput.textContent = "";
 
-  const genResult = generateMeetingPrompt(edits);
+  let streamedText = "";
+  let overlayDismissed = false;
 
-  showGeneratingStep("品質診断を反映中…");
-  await yieldToMain();
+  const genResult = await generateMeetingPrompt(edits, {
+    onStep: (step) => showGeneratingStep(step),
+    onDelta: (text) => {
+      if (!overlayDismissed) {
+        showGenerating(false);
+        overlayDismissed = true;
+      }
+      streamedText += text;
+      DOM.promptOutput.textContent = streamedText;
+      DOM.promptOutput.scrollTop = DOM.promptOutput.scrollHeight;
+    },
+  });
 
   const previewSaved = {
     id: null,
@@ -99,21 +109,24 @@ async function runMeetingGeneration(edits, handlers) {
     datetime: new Date().toISOString(),
   };
 
-  showGeneratingStep("プロンプト完成 — 結果を表示中…");
   state.categoryId = genResult.category;
   handlers.onComplete(previewSaved);
 
-  showGenerating(false);
-  showGeneratingStep("");
+  if (genResult.metrics.fallback) {
+    showToast("GPT-4o を利用できないため、テンプレートで生成しました");
+  } else {
+    showToast("GPT-4o で AI会議の内容を統合しました");
+  }
 
-  logGenerationSummary(genResult, { networkCalls: 0 });
+  showGeneratingStep("");
+  logGenerationSummary(genResult, { networkCalls: genResult.metrics.aiApiCalls });
 
   const saveStart = performance.now();
   saveAI(toSavePayload(genResult)).then((saved) => {
     state.savedPromptId = saved.id;
     addRecentAI(saved.id);
     logGenerationSummary(genResult, {
-      networkCalls: 1,
+      networkCalls: genResult.metrics.aiApiCalls + 1,
       saveMs: Math.round(performance.now() - saveStart),
     });
     showToast("クラウドへの保存が完了しました");
