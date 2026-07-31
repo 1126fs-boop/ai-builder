@@ -80,22 +80,8 @@ async function handleGenerate(handlers) {
 async function runMeetingGeneration(edits, handlers) {
   await yieldToMain();
 
-  DOM.promptOutput.textContent = "";
-
-  let streamedText = "";
-  let overlayDismissed = false;
-
   const genResult = await generateMeetingPrompt(edits, {
     onStep: (step) => showGeneratingStep(step),
-    onDelta: (text) => {
-      if (!overlayDismissed) {
-        showGenerating(false);
-        overlayDismissed = true;
-      }
-      streamedText += text;
-      DOM.promptOutput.textContent = streamedText;
-      DOM.promptOutput.scrollTop = DOM.promptOutput.scrollHeight;
-    },
   });
 
   const previewSaved = {
@@ -112,14 +98,9 @@ async function runMeetingGeneration(edits, handlers) {
   state.categoryId = genResult.category;
   handlers.onComplete(previewSaved);
 
-  if (genResult.metrics.fallback) {
-    showToast("GPT-4o を利用できないため、テンプレートで生成しました");
-  } else {
-    showToast("GPT-4o で AI会議の内容を統合しました");
-  }
-
+  showToast("プロンプトを生成しました");
   showGeneratingStep("");
-  logGenerationSummary(genResult, { networkCalls: genResult.metrics.aiApiCalls });
+  logGenerationSummary(genResult, { networkCalls: 0 });
 
   const saveStart = performance.now();
   saveAI(toSavePayload(genResult)).then((saved) => {

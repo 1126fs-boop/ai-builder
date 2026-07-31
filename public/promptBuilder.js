@@ -70,7 +70,7 @@ const FORMAT_INSTRUCTIONS = {
 /**
  * 構造化プロンプトを組み立て（高品質版）
  */
-function structured({ role, mission, context, rules, format, tone, example, purpose, target, prerequisites }) {
+function structured({ role, mission, context, rules, format, tone, example, purpose, target, prerequisites, notes }) {
   const industry = context?.includes("取引先業種") ? context.match(/取引先業種: ([^\n]+)/)?.[1] : null;
   return structuredPro({
     role,
@@ -86,6 +86,7 @@ function structured({ role, mission, context, rules, format, tone, example, purp
     outputFormat: format,
     evaluationCriteria: DEFAULT_EVALUATION_CRITERIA,
     improvementPoints: "不足情報は【】プレースホルダーで明示し、営業担当者が埋められるようにする",
+    notes: notes || "架空の数字・店舗名は【】で明示する。競合他社名は出さない。",
     examples: example || "Before/Afterの数字例を1つ以上含める",
     expectedOutput: "営業担当者がChatGPT等に貼り付けて即使用できる完成プロンプト",
     tone: tone || "プロフェッショナルで現場感のある日本語",
@@ -144,6 +145,7 @@ const PROMPT_BUILDERS = {
       format: fmt,
       tone: `${answers.tone}。自然な日本語`,
       example: "【共感】→【課題】→【提案】→【メリット】→【CTA】",
+      notes: "初回接触では信頼構築を最優先。商品名の羅列は避ける。",
     }));
   },
 

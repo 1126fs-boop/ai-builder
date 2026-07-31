@@ -17,6 +17,7 @@ export function structuredPro({
   evaluationCriteria,
   thinkingProcess,
   improvementPoints,
+  notes,
   examples,
   expectedOutput,
   tone,
@@ -43,6 +44,7 @@ export function structuredPro({
   if (outputFormat) sections.push(`# 出力形式\n${outputFormat}`);
   if (evaluationCriteria) sections.push(`# 評価基準\n${evaluationCriteria}`);
   if (improvementPoints) sections.push(`# 改善ポイント\n${improvementPoints}`);
+  if (notes) sections.push(`# 注意事項\n${notes}`);
   if (examples) sections.push(`# 具体例\n${examples}`);
   if (expectedOutput) sections.push(`# 期待するアウトプット\n${expectedOutput}`);
   if (tone) sections.push(`# 文体・トーン\n${tone}`);
@@ -94,6 +96,7 @@ export function buildMeetingPromptPayload(edits) {
     outputFormat: `1. エグゼクティブサマリー（3行）\n2. 背景と課題定義\n3. 推奨アクションプラン（優先順位付き）\n4. 各施策の具体的手順\n5. KPI・効果測定方法\n6. リスクと注意点\n7. 明日からのToDo（チェックリスト）`,
     evaluationCriteria: DEFAULT_EVALUATION_CRITERIA,
     improvementPoints: "会議で言及された弱点・懸念点を必ず「注意点」セクションに反映する",
+    notes: "会議の結論と矛盾する提案は含めない。未確定事項は【要確認】と明示する。",
     examples: "各施策に「具体例（サロン/クリニックのシーン）」を1つ以上付ける",
     expectedOutput: "営業担当者がコピーしてAIチャットに貼り付け、追加指示なしで実務に使える完成プロンプト",
     tone: "プロフェッショナルかつ現場感のある日本語。箇条書きと見出しを活用",
