@@ -1,50 +1,20 @@
 /**
  * 提案書 — 成果物 Blueprint（10章構成）
+ *
+ * AnalysisContext のみを参照して設計図を生成する。
  */
 
-import {
-  CHALLENGE_IMPACT,
-  INDUSTRY_CONTEXT,
-} from "../domainKnowledge.js";
 import { evaluateProposalBlueprint } from "../rubrics/proposalQuality.js";
+import { resolveBlueprintInputs } from "./_context.js";
 
-/** 業種×課題 → 根本原因仮説 */
-const ROOT_CAUSE_MATRIX = {
-  売上アップ: {
-    default: "新規集客不足とリピート率低下の複合",
-    エステサロン: "リピート周期の長期化とメニュー単価の停滞",
-    美容室: "指名率・カラー比率の低迷",
-    ネイルサロン: "来店頻度低下と単価の上限",
-    クリニック: "リピート施術と物販の伸び悩み",
-  },
-  集客改善: {
-    default: "集客チャネルの固定化と来店導線の弱さ",
-    エステサロン: "紹介依存とSNS来店転換の不足",
-    美容室: "新規客のリピート化率が低い",
-  },
-  客単価アップ: {
-    default: "メニュー構成と提案力の不足",
-    エステサロン: "オプション提案率と店販比率の低さ",
-    美容室: "カラー・トリートメントの提案不足",
-  },
-  リピート率向上: {
-    default: "来店周期管理とフォロー体制の未整備",
-  },
-  業務効率化: {
-    default: "施術オペレーションと予約管理の非効率",
-  },
-  "スタッフ育成・採用": {
-    default: "育成体系と定着施策の不足",
-  },
-};
-
-function runLensReviews(answers, analysis) {
-  const industry = answers.industry || "美容サロン";
+function runLensReviews(inputs, blueprint) {
+  const { answers, purpose, challenge } = inputs;
+  const industry = challenge.industry || answers.industry || "美容サロン";
   return [
     {
       lensId: "consultant",
       focus: "サロン経営コンサル視点",
-      insight: `${industry}では${analysis.industryContext}。${answers.client_challenge}はKPIに直結する。`,
+      insight: `${industry}では${challenge.industryContext}。${challenge.surfaceChallenge}はKPIに直結する。`,
     },
     {
       lensId: "sales",
@@ -59,16 +29,12 @@ function runLensReviews(answers, analysis) {
   ];
 }
 
-function resolveRootCause(industry, challenge) {
-  const row = ROOT_CAUSE_MATRIX[challenge] || {};
-  return row[industry] || row.default || `${challenge}の構造的要因（推測）`;
-}
-
 function buildMeasures(challenge, productArea) {
+  const surface = challenge.surfaceChallenge || challenge;
   const area = productArea || "ソリューション";
   return [
-    { priority: 1, title: "Quick Win（2週間）", body: `現状ヒアリング3項目を整理し、${challenge}のボトルネック1つを特定` },
-    { priority: 2, title: "90日施策", body: `${area}を活用した${challenge}改善のPoC（小規模検証）` },
+    { priority: 1, title: "Quick Win（2週間）", body: `現状ヒアリング3項目を整理し、${surface}のボトルネック1つを特定` },
+    { priority: 2, title: "90日施策", body: `${area}を活用した${surface}改善のPoC（小規模検証）` },
     { priority: 3, title: "仕組み化（180日）", body: "成功パターンを標準化し、全スタッフが再現できる運用へ" },
   ];
 }
@@ -77,7 +43,7 @@ function buildObjections(challenge) {
   return [
     {
       concern: "本当に効果が出るか不安",
-      response: `${CHALLENGE_IMPACT[challenge] || "経営改善"}をKPIで測定。2週間のQuick Winで初期効果を確認`,
+      response: `${challenge.impact}をKPIで測定。2週間のQuick Winで初期効果を確認`,
     },
     {
       concern: "スタッフが使いこなせるか",
@@ -87,47 +53,48 @@ function buildObjections(challenge) {
 }
 
 /**
- * 提案書 deliverableBlueprint を組み立て
- * @param {Object} answers
+ * @param {Object} ctx AnalysisContext エンベロープ
  */
-export function buildProposalBlueprint(answers) {
-  const industry = answers.industry || "美容サロン";
-  const challenge = answers.client_challenge || "売上アップ";
+export function buildProposalBlueprint(ctx) {
+  const inputs = resolveBlueprintInputs(ctx);
+  const { answers, purpose, challenge, knowledge, structure, lensReviews, synthesis } = inputs;
+
+  const industry = challenge.industry;
+  const surfaceChallenge = challenge.surfaceChallenge;
   const scope = answers.proposal_scope || "ソリューション提案書（初回）";
   const productArea = answers.product_area || answers._inferred?.product_area || "複合提案";
-  const impact = CHALLENGE_IMPACT[challenge] || "経営課題の改善";
-  const industryContext = INDUSTRY_CONTEXT[industry] || `${industry}の経営特性に合わせた提案`;
-  const rootCause = resolveRootCause(industry, challenge);
-
-  const before = answers.client_context?.trim()
-    ? `【現状】${answers.client_context.slice(0, 200)}`
-    : `【現状】${industry}として${challenge}に課題感がある（詳細は【要ヒアリング】）`;
-
-  const after = `【理想】${impact}を実現。${rootCause}が解消された状態`;
 
   const blueprint = {
     useCaseId: "proposal_doc",
+    purpose,
+    challenge,
+    synthesis,
+    knowledgeRefs: knowledge.refs ?? [],
     industry,
-    surfaceChallenge: challenge,
-    rootCause,
-    industryContext,
+    surfaceChallenge,
+    rootCause: challenge.rootCause,
+    industryContext: challenge.industryContext,
     proposalScope: scope,
     productArea,
-    impact,
-    before,
-    after,
-    proposalStory: `${industry}の${challenge}は、${rootCause}が背景にある。${productArea}による経営改善提案として、Before/Afterを明示する。`,
+    impact: challenge.impact,
+    before: challenge.beforeHypothesis,
+    after: challenge.afterHypothesis,
+    proposalStory: `${industry}の${surfaceChallenge}は、${challenge.rootCause}が背景にある。${productArea}による経営改善提案として、Before/Afterを明示する。`,
     measures: buildMeasures(challenge, productArea),
     objections: buildObjections(challenge),
-    kpi: impact,
-    cta: scope.includes("プレゼン")
+    kpi: challenge.impact,
+    cta: structure.ctaType || (scope.includes("プレゼン")
       ? "次回商談でデモ・体験日を確定"
-      : "2週間PoCの開始日と担当者を確定",
-    tone: answers.tone || answers._inferred?.tone || "説得力重視",
-    outputFormat: answers.output_format || "提案書全文",
+      : "2週間PoCの開始日と担当者を確定"),
+    tone: structure.tone || purpose.tone || "説得力重視",
+    outputFormat: structure.outputFormat || answers.output_format || "提案書全文",
     hearingNotes: answers.hearing_notes || "",
-    lensReviews: [],
-    chapters: [
+    constraintsSummary: purpose.constraints?.map((c) => `- ${c}`).join("\n") ?? "",
+    improvementPoints: purpose.successCriteria ?? [],
+    narrativeArc: structure.narrativeArc,
+    copyStrategy: structure.copyStrategy,
+    lensReviews: lensReviews.length ? lensReviews : runLensReviews(inputs, {}),
+    chapters: structure.sections?.length ? structure.sections : [
       "エグゼクティブサマリー",
       "取引先の現状分析",
       "課題の深掘り",
@@ -141,7 +108,6 @@ export function buildProposalBlueprint(answers) {
     ],
   };
 
-  blueprint.lensReviews = runLensReviews(answers, blueprint);
   blueprint.quality = evaluateProposalBlueprint(blueprint);
 
   return blueprint;

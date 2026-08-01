@@ -1,5 +1,5 @@
 /**
- * AI Builder v2.0 — 結果画面（保存・品質診断・AI評価）
+ * AI Builder v2.0 — 結果画面（保存・品質診断・AI評価・Adapter Handoff）
  */
 
 import { getCategory } from "../categories.js";
@@ -25,13 +25,21 @@ import {
 } from "./ai/promptGenerationPipeline.js";
 import { yieldToMain } from "./ai/performanceProfiler.js";
 import { withTimeout } from "./asyncUtils.js";
+import { buildHandoff } from "./thinkingEngine/index.js";
+import { openaiImagesAdapter } from "./thinkingEngine/adapters/openaiImagesAdapter.js";
+import { generateImageFromPrompt } from "./imageGenerationService.js";
 
 const LOG = "[resultView]";
 const GENERATION_TIMEOUT_MS = 15000;
 let generationInFlight = false;
+let imageGenInFlight = false;
 
 let onGoHome = () => {};
 let currentSavedId = null;
+/** @type {Object|null} */
+let currentGeneratedPrompt = null;
+/** @type {string|null} */
+let currentImageBlobUrl = null;
 
 export function initResultView(handlers) {
   onGoHome = handlers.onGoHome;
@@ -69,6 +77,7 @@ export async function showGeneratedResult() {
 export function showMeetingResult(saved) {
   currentSavedId = saved.id;
   state.savedPromptId = saved.id;
+  currentGeneratedPrompt = saved.answers?.__persistables?.generatedPrompt ?? null;
   renderResult(saved);
   showView("result");
 }
@@ -80,6 +89,7 @@ async function runGeneration() {
 
   currentSavedId = null;
   state.savedPromptId = null;
+  revokeImageBlob();
 
   const mergedAnswers = { ...state.inferredAnswers, ...state.answers };
   const genResult = await generateWizardPrompt(state.categoryId, mergedAnswers, {
@@ -92,6 +102,7 @@ async function runGeneration() {
   });
 
   state.categoryId = genResult.category;
+  currentGeneratedPrompt = genResult.generatedPrompt ?? null;
 
   const previewSaved = {
     id: null,
@@ -101,6 +112,7 @@ async function runGeneration() {
     prompt: genResult.prompt,
     answers: genResult.answers,
     quality: genResult.quality,
+    qualityGate: genResult.qualityGate,
     datetime: new Date().toISOString(),
   };
 
@@ -142,6 +154,8 @@ export function openTemplateResult(template) {
   currentSavedId = null;
   state.savedPromptId = null;
   state.categoryId = template.category;
+  currentGeneratedPrompt = null;
+  revokeImageBlob();
 
   renderResult(item);
   showView("result");
@@ -155,6 +169,8 @@ export function openSavedResult(savedId) {
   currentSavedId = item.id;
   state.savedPromptId = item.id;
   state.categoryId = item.category;
+  currentGeneratedPrompt = item.answers?.__persistables?.generatedPrompt ?? null;
+  revokeImageBlob();
 
   renderResult(item);
   showView("result");
@@ -180,9 +196,52 @@ function renderResult(item) {
   renderList(DOM.qualityMissingList, quality.missing, "quality-missing-list");
   DOM.qualityRecommendation.textContent = quality.recommendation;
 
+  renderAdapterActions(item);
+  renderImageSection(item);
+
   updateFavoriteButton(item.id);
   DOM.btnCopy.classList.remove("btn--copied");
   DOM.btnCopyLabel.textContent = "プロンプトをコピー";
+}
+
+/** ChatGPT Handoff / 画像生成ボタン */
+function renderAdapterActions(item) {
+  const gp = currentGeneratedPrompt ?? item.answers?.__persistables?.generatedPrompt ?? null;
+
+  if (DOM.btnChatgptHandoff) {
+    DOM.btnChatgptHandoff.hidden = !gp;
+  }
+
+  if (DOM.btnGenerateImage) {
+    const canImage = gp && openaiImagesAdapter.canGenerate(gp);
+    DOM.btnGenerateImage.hidden = !canImage;
+  }
+}
+
+/** 画像プレビューセクション */
+function renderImageSection(item) {
+  if (!DOM.imageResultSection) return;
+
+  const gp = currentGeneratedPrompt ?? item.answers?.__persistables?.generatedPrompt ?? null;
+  const isImageCategory = item.category === "sns" || item.category === "image";
+  const showSection = isImageCategory && gp;
+
+  DOM.imageResultSection.hidden = !showSection;
+
+  if (DOM.imagePreview && !currentImageBlobUrl) {
+    DOM.imagePreview.hidden = true;
+    DOM.imagePreview.removeAttribute("src");
+  }
+
+  if (DOM.btnDownloadImage) {
+    DOM.btnDownloadImage.hidden = !currentImageBlobUrl;
+  }
+
+  if (DOM.imagePlaceholder && !currentImageBlobUrl) {
+    DOM.imagePlaceholder.hidden = false;
+    DOM.imagePlaceholder.textContent =
+      "「画像を生成」ボタンで、背景＋公式商品画像の合成画像を作成できます";
+  }
 }
 
 function renderDimensions(dimensions) {
@@ -233,6 +292,90 @@ function updateFavoriteButton(savedId) {
   DOM.btnFavorite.classList.toggle("btn--favorited", fav);
 }
 
+function revokeImageBlob() {
+  if (currentImageBlobUrl) {
+    URL.revokeObjectURL(currentImageBlobUrl);
+    currentImageBlobUrl = null;
+  }
+}
+
+/** ChatGPT で開く（クリップボード Handoff） */
+export async function handoffToChatgpt() {
+  const gp = currentGeneratedPrompt;
+  if (!gp) {
+    showToast("プロンプトデータがありません");
+    return;
+  }
+
+  try {
+    const handoff = buildHandoff(gp, "chatgpt");
+    await copyToClipboard(handoff.text);
+    showToast("ChatGPT用プロンプトをコピーしました。ChatGPTを開いて貼り付けてください。");
+    window.open("https://chatgpt.com/", "_blank", "noopener,noreferrer");
+  } catch (err) {
+    showToast(err instanceof Error ? err.message : "Handoff に失敗しました");
+  }
+}
+
+/** 画像を生成（公式商品画像合成） */
+export async function generateResultImage() {
+  const gp = currentGeneratedPrompt;
+  if (!gp || imageGenInFlight) return;
+
+  imageGenInFlight = true;
+  if (DOM.btnGenerateImage) {
+    DOM.btnGenerateImage.disabled = true;
+    DOM.btnGenerateImage.textContent = "生成中…";
+  }
+  if (DOM.imagePlaceholder) {
+    DOM.imagePlaceholder.textContent = "背景を生成し、公式商品画像を配置しています…";
+  }
+
+  try {
+    revokeImageBlob();
+    const { blobUrl } = await generateImageFromPrompt(gp);
+    currentImageBlobUrl = blobUrl;
+
+    if (DOM.imagePreview) {
+      DOM.imagePreview.src = blobUrl;
+      DOM.imagePreview.hidden = false;
+    }
+    if (DOM.imagePlaceholder) {
+      DOM.imagePlaceholder.hidden = true;
+    }
+
+    showToast("画像を生成しました（公式商品画像を配置済み）");
+    if (DOM.btnDownloadImage) {
+      DOM.btnDownloadImage.hidden = false;
+    }
+  } catch (err) {
+    console.error(`${LOG} generateResultImage failed`, err);
+    showToast(err instanceof Error ? err.message : "画像生成に失敗しました");
+    if (DOM.imagePlaceholder) {
+      DOM.imagePlaceholder.hidden = false;
+      DOM.imagePlaceholder.textContent = "「画像を生成」ボタンで、背景＋公式商品画像の合成画像を作成できます";
+    }
+  } finally {
+    imageGenInFlight = false;
+    if (DOM.btnGenerateImage) {
+      DOM.btnGenerateImage.disabled = false;
+      DOM.btnGenerateImage.textContent = "画像を生成";
+    }
+  }
+}
+
+/** 生成画像をダウンロード */
+export function downloadResultImage() {
+  if (!currentImageBlobUrl || !DOM.imagePreview?.src) {
+    showToast("先に画像を生成してください");
+    return;
+  }
+  const a = document.createElement("a");
+  a.href = currentImageBlobUrl;
+  a.download = `ai-builder-${Date.now()}.png`;
+  a.click();
+}
+
 export async function copyPrompt() {
   await copyToClipboard(DOM.promptOutput.textContent);
   DOM.btnCopy.classList.add("btn--copied");
@@ -252,6 +395,7 @@ export function restartCategory() {
 }
 
 export function goHomeFromResult() {
+  revokeImageBlob();
   onGoHome();
 }
 

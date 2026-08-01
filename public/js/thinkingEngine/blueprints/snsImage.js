@@ -5,20 +5,31 @@
 import {
   runLensReviews,
   evaluateDeliverableQuality,
-  resolveImpact,
 } from "./_shared.js";
+import { buildCopyPatterns } from "../core/knowledge/wamKnowledgeBase.js";
+import { resolveBlueprintInputs } from "./_context.js";
 
-export function buildSnsImageBlueprint(answers) {
-  const product = answers.wam_product || "【商品名】";
+/**
+ * @param {Object} ctx AnalysisContext エンベロープ
+ */
+export function buildSnsImageBlueprint(ctx) {
+  const { answers, purpose, challenge, knowledge, structure, lensReviews, synthesis } = resolveBlueprintInputs(ctx);
+
+  const product = answers.wam_product || knowledge.productKnowledge?.name || "【商品名】";
   const fmt = answers.sns_format || "Instagram投稿";
   const appeal = answers.appeal_axis || "導入メリット";
-  const target = answers.target_audience || "サロンオーナー";
+  const target = answers.target_audience || purpose.audience || "サロンオーナー";
   const aspect = answers.aspect || "1:1（1080×1080）";
-  const impact = resolveImpact(appeal === "売上アップ" ? "売上アップ" : appeal === "リピート率向上" ? "リピート率向上" : "売上アップ");
+  const impact = challenge.impact;
 
   const blueprint = {
     useCaseId: "sns_image",
-    purpose: `${target}向け${fmt}。${product}の${appeal}を訴求`,
+    purpose,
+    challenge,
+    synthesis,
+    layoutSpec: structure.layoutSpec,
+    knowledgeRefs: knowledge.refs ?? [],
+    productAsset: knowledge.productKnowledge,
     snsFormat: fmt,
     product,
     appealAxis: appeal,
@@ -26,23 +37,24 @@ export function buildSnsImageBlueprint(answers) {
     aspect,
     impact,
     catchDirection: answers.catch_direction || "",
-    visualConcept: `${product}を主役に、${appeal}を${target}が「自分ごと化」できる構図。経営課題（${impact}）と結びつけたビジュアル。`,
-    copyPatterns: [
-      `【数字訴求】${impact}を実現する${product}`,
-      `【課題共感】${target}の${appeal}、${product}で変わる`,
-      `【CTA】詳しくはプロフィールリンク / DMで「資料希望」`,
-    ],
+    visualConcept: `${product}を主役に、${appeal}を${target}が「自分ごと化」できる構図。${challenge.surfaceChallenge}（${impact}）と結びつけたビジュアル。`,
+    copyPatterns: buildCopyPatterns(appeal, {
+      product,
+      target,
+      impact,
+      challenge: challenge.surfaceChallenge,
+    }),
     captionStructure: "1行目フック → 課題共感 → 商品価値 → CTA",
     hashtags: "#美容サロン #サロン経営 #BtoB美容 #ワム #経営改善",
-    constraintsSummary: "- 公式HP未掲載の商品表現禁止\n- 経営課題と結びつけた訴求\n- 商品写真のみの構成禁止（コピー必須）",
+    constraintsSummary: [
+      ...(knowledge.antiPatterns?.slice(0, 2) ?? []),
+      "経営課題と結びつけた訴求",
+      "商品写真のみの構成禁止（コピー必須）",
+    ].map((c) => `- ${c}`).join("\n"),
     outputFormat: answers.output_format || "画像生成プロンプト（英語）+キャプション",
-    improvementPoints: [
-      "視線誘導: 商品→キャッチ→CTA",
-      "1枚で保存される構図",
-      `${target}が共感する課題ワードを含める`,
-    ],
+    improvementPoints: purpose.successCriteria ?? [],
     notes: answers.catch_direction ? `キャッチ方向: ${answers.catch_direction}` : "",
-    sections: [
+    sections: structure.sections?.length ? structure.sections : [
       "ビジュアルコンセプト",
       "キャッチコピー3案",
       "画像生成プロンプト（英語）",
@@ -52,23 +64,23 @@ export function buildSnsImageBlueprint(answers) {
     ],
   };
 
-  blueprint.lensReviews = runLensReviews({
+  blueprint.lensReviews = lensReviews.length ? lensReviews : runLensReviews({
     context: blueprint,
     lenses: [
       {
         id: "designer",
         focus: "販促デザイナー",
-        insight: (ctx) => `${ctx.product}を左1/3、キャッチを右。${ctx.aspect}で視認性優先。`,
+        insight: (c) => `${c.product}を左1/3、キャッチを右。${c.aspect}で視認性優先。`,
       },
       {
         id: "sns",
         focus: "SNS運用",
-        insight: (ctx) => `${ctx.snsFormat}は1行目3秒で課題に触れる。保存→プロフィール遷移設計。`,
+        insight: (c) => `${c.snsFormat}は1行目3秒で${challenge.surfaceChallenge}に触れる。`,
       },
       {
         id: "owner",
         focus: "サロンオーナー視点",
-        insight: (ctx) => `「${ctx.appealAxis}」が経営にどう効くかが見えないとスルーされる。`,
+        insight: (c) => `「${c.appealAxis}」が経営（${impact}）にどう効くかを明示。`,
       },
     ],
   });
@@ -77,6 +89,7 @@ export function buildSnsImageBlueprint(answers) {
     { id: "product", label: "商品指定", pass: Boolean(answers.wam_product) },
     { id: "appeal", label: "訴求軸", pass: Boolean(answers.appeal_axis) },
     { id: "target", label: "ターゲット", pass: Boolean(answers.target_audience) },
+    { id: "challenge", label: "経営課題分析", pass: challenge.confidence >= 0.5 },
     { id: "copy", label: "コピー案", pass: blueprint.copyPatterns.length >= 3 },
     { id: "cta", label: "CTA", pass: blueprint.copyPatterns.some((c) => c.includes("CTA") || c.includes("DM")) },
   ]);

@@ -13,6 +13,9 @@ import {
   openSavedResult,
   openTemplateResult,
   copyPrompt,
+  handoffToChatgpt,
+  generateResultImage,
+  downloadResultImage,
   handleFavoriteToggle,
   restartCategory,
   goHomeFromResult,
@@ -69,6 +72,9 @@ async function init() {
   DOM.btnTopHome.addEventListener("click", goHomeFromQuestions);
 
   DOM.btnCopy.addEventListener("click", copyPrompt);
+  DOM.btnChatgptHandoff?.addEventListener("click", handoffToChatgpt);
+  DOM.btnGenerateImage?.addEventListener("click", generateResultImage);
+  DOM.btnDownloadImage?.addEventListener("click", downloadResultImage);
   DOM.btnFavorite.addEventListener("click", handleFavoriteToggle);
   DOM.btnRestart.addEventListener("click", restartCategory);
   DOM.btnHome.addEventListener("click", goHomeFromResult);

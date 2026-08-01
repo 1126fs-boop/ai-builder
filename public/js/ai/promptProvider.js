@@ -68,6 +68,10 @@ export async function generateWizardViaProvider(categoryId, answers, callbacks =
     category: categoryId,
     categoryLabel: category.label,
     answers: { ...answers },
+    generatedPrompt: thinking?.generatedPrompt ?? null,
+    analysisContext: thinking?.analysisContext ?? null,
+    deliverableBlueprint: thinking?.deliverableBlueprint ?? null,
+    qualityGate: thinking?.qualityGate ?? null,
     metrics: {
       provider: ACTIVE_PROVIDER,
       aiApiCalls: 0,
