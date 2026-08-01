@@ -124,6 +124,34 @@ export function buildDeliverable(categoryId, answers) {
 
 export { hasSchemaFlow, runGapAnalysis, getSeedQuestions } from "./schemas/index.js";
 
+export { runAnalysisPipeline, runWizardAnalysis } from "./core/pipeline/analysisPipeline.js";
+export { runDeliverablePipeline } from "./core/pipeline/deliverablePipeline.js";
+export {
+  createAnalysisContext,
+  unwrapAnalysisContext,
+} from "./core/types/analysisContext.js";
+export { createBlueprint, unwrapBlueprint } from "./core/types/blueprint.js";
+export {
+  createGeneratedPrompt,
+  createPromptDeliverable,
+  getPrimaryPromptText,
+  getDeliverablePromptText,
+  unwrapGeneratedPrompt,
+} from "./core/types/generatedPrompt.js";
+export {
+  serializePersistable,
+  deserializePersistable,
+  generatePersistableId,
+} from "./core/types/persistable.js";
+export {
+  registerKnowledgeItem,
+  registerCompanyRule,
+  buildKnowledgeSnapshot,
+  listKnowledgeItems,
+} from "./core/knowledge/knowledgeRegistry.js";
+export { runQualityGate, QUALITY_PASS_THRESHOLD } from "./core/quality/rubricFramework.js";
+export { buildHandoff, buildImageGenerationHandoff, getAdapter, listAdapters } from "./adapters/registry.js";
+
 // ── 共通ユーティリティ ──
 
 export {

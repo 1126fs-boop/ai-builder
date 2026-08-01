@@ -7,6 +7,8 @@ import { SNS_IMAGE_SCHEMA } from "./snsImage.js";
 import { NEWSLETTER_LINE_SCHEMA } from "./newsletterLine.js";
 import { SALES_TALK_SCHEMA } from "./salesTalk.js";
 import { POP_PROMO_SCHEMA } from "./popPromo.js";
+import { runWizardAnalysis } from "../core/pipeline/analysisPipeline.js";
+import { emptyGapAnalysis } from "../core/analyzers/gapAnalyzer.js";
 
 /** @type {Map<string, import("./types.js").UseCaseSchema>} */
 const SCHEMAS = new Map([
@@ -30,49 +32,17 @@ export function hasSchemaFlow(categoryId) {
   return SCHEMAS.has(categoryId);
 }
 
+/**
+ * 不足情報分析 — thinkingCore フェーズ1〜3 経由
+ * @param {string} categoryId
+ * @param {Object} answers
+ */
 export function runGapAnalysis(categoryId, answers) {
   const schema = getSchemaForCategory(categoryId);
-  if (!schema) {
-    return {
-      followUpQuestions: [],
-      inferredAnswers: {},
-      canGenerate: true,
-      qualityScore: 0.5,
-      missingCritical: [],
-    };
-  }
+  if (!schema) return emptyGapAnalysis();
 
-  const inferredAnswers = schema.inferDefaults?.(answers) || {};
-  const merged = { ...inferredAnswers, ...answers };
-
-  const candidates = schema.dynamicRules
-    .filter((rule) => rule.when(merged))
-    .sort((a, b) => b.priority - a.priority);
-
-  const followUpQuestions = [];
-  for (const rule of candidates) {
-    if (followUpQuestions.length >= schema.maxDynamicQuestions) break;
-    const q = schema.dynamicQuestions?.[rule.questionId];
-    if (q && !merged[q.id]?.trim()) {
-      followUpQuestions.push({ ...q, _reason: rule.reason });
-    }
-  }
-
-  const missingCritical = schema.seedQuestions
-    .filter((q) => !q.optional && !merged[q.id]?.trim())
-    .map((q) => q.text);
-
-  const qualityScore = schema.estimateQuality
-    ? schema.estimateQuality(merged, followUpQuestions.length)
-    : 0.5;
-
-  return {
-    followUpQuestions,
-    inferredAnswers,
-    canGenerate: missingCritical.length === 0,
-    qualityScore,
-    missingCritical,
-  };
+  const { gap } = runWizardAnalysis(categoryId, answers);
+  return gap;
 }
 
 export function getSeedQuestions(categoryId) {

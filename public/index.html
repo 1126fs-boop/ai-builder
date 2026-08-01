@@ -167,6 +167,16 @@
         <pre id="prompt-output" class="result-card__prompt"></pre>
       </div>
 
+      <!-- 画像生成（SNS / POP） -->
+      <div id="image-result-section" class="image-result" hidden>
+        <div class="image-result__header">
+          <span class="image-result__label">販促ビジュアル</span>
+          <span class="image-result__badge">公式商品画像を配置</span>
+        </div>
+        <p id="image-placeholder" class="image-result__placeholder">「画像を生成」ボタンで、背景＋公式商品画像の合成画像を作成できます</p>
+        <img id="image-preview" class="image-result__preview" alt="生成された販促画像" hidden>
+      </div>
+
       <!-- 品質診断 + AI評価 -->
       <div id="quality-check" class="evaluation-card">
         <div class="evaluation-card__header">
@@ -194,7 +204,10 @@
       </div>
 
       <div class="result-actions">
-        <button id="btn-copy" class="btn btn--primary btn--full" type="button">
+        <button id="btn-generate-image" class="btn btn--primary btn--full" type="button" hidden>画像を生成</button>
+        <button id="btn-download-image" class="btn btn--secondary btn--full" type="button" hidden>画像をダウンロード</button>
+        <button id="btn-chatgpt-handoff" class="btn btn--primary btn--full" type="button" hidden>ChatGPTで開く</button>
+        <button id="btn-copy" class="btn btn--secondary btn--full" type="button">
           <span id="btn-copy-label">プロンプトをコピー</span>
         </button>
         <button id="btn-favorite" class="btn btn--ghost btn--full" type="button">☆ お気に入りに追加</button>

@@ -57,6 +57,10 @@ function normalizeResult(result) {
     category: result.category,
     categoryLabel: result.categoryLabel,
     answers: result.answers,
+    generatedPrompt: result.generatedPrompt ?? null,
+    analysisContext: result.analysisContext ?? null,
+    deliverableBlueprint: result.deliverableBlueprint ?? null,
+    qualityGate: result.qualityGate ?? null,
     metrics: {
       aiApiCalls: 0,
       networkCalls: 0,
@@ -74,13 +78,24 @@ function normalizeResult(result) {
 
 /** 生成結果を保存用オブジェクトに変換 */
 export function toSavePayload(result) {
+  const persistables = {};
+  if (result.generatedPrompt) persistables.generatedPrompt = result.generatedPrompt;
+  if (result.analysisContext) persistables.analysisContext = result.analysisContext;
+  if (result.deliverableBlueprint) persistables.blueprint = result.deliverableBlueprint;
+
+  const answers = { ...(result.answers || {}) };
+  if (Object.keys(persistables).length > 0) {
+    answers.__persistables = persistables;
+  }
+
   return {
     title: result.title,
     category: result.category,
     categoryLabel: result.categoryLabel,
     prompt: result.prompt,
-    answers: result.answers,
+    answers,
     quality: result.quality,
+    qualityGate: result.qualityGate ?? null,
   };
 }
 
