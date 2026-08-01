@@ -15,7 +15,7 @@ import {
 import { diagnoseQuality } from "../../qualityEngine.js";
 import { buildMeetingPromptPayload, structuredPro } from "./promptEnhancer.js";
 import { wrapPrompt } from "../../context.js";
-import { analyzeForWizard, buildProposalDeliverable } from "../thinkingEngine/index.js";
+import { analyzeForWizard, buildDeliverable, hasSchemaFlow } from "../thinkingEngine/index.js";
 
 /** @typedef {"template"|"openai"} PromptProviderId */
 
@@ -43,8 +43,8 @@ export async function generateWizardViaProvider(categoryId, answers, callbacks =
   let prompt;
   let thinking;
 
-  if (categoryId === "proposal") {
-    thinking = buildProposalDeliverable(answers);
+  if (hasSchemaFlow(categoryId)) {
+    thinking = buildDeliverable(categoryId, answers);
     prompt = thinking.deliverablePrompt;
   } else {
     thinking = analyzeForWizard(categoryId, answers);

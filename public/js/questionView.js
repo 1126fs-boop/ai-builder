@@ -28,6 +28,19 @@ const QUESTION_HINTS = {
   product_area: "提案する商品・サービス領域です",
   client_context: "取引先の状況を入力すると提案書の具体性が大きく向上します",
   hearing_notes: "商談メモがあれば貼り付けてください",
+  sns_format: "サイズ・構成が自動で最適化されます",
+  appeal_axis: "経営課題と結びつけた訴求軸を設計します",
+  target_audience: "ターゲットでトーンと訴求が変わります",
+  catch_direction: "入力するとコピーの精度が上がります",
+  channel: "形式に合わせて文体と長さを最適化します",
+  purpose: "目的で件名・CTAの設計が変わります",
+  audience: "相手に合ったトーンと訴求を設計します",
+  value: "提供する価値。開封・読了率に直結します",
+  product_topic: "新商品案内では商品名・テーマを入れると具体性が上がります",
+  usage: "用途に合わせてレイアウトとサイズを最適化します",
+  appeal_point: "訴求軸でヘッドラインとビジュアルが決まります",
+  display_location: "掲示場所で文字サイズとレイアウトが変わります",
+  size_format: "サイズ指定があるとデザイン指示が具体化します",
 };
 
 export function initQuestionView(handlers) {

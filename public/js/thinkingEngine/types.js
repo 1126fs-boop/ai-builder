@@ -29,6 +29,8 @@ export const SCENARIO = {
     TO_PAYLOAD: "to-payload",
     GAP: "gap",
     PROPOSAL_DELIVERABLE: "proposal-deliverable",
+    /** 全 Blueprint 成果物（proposal / sns / newsletter / sales / image） */
+    DELIVERABLE: "deliverable",
   },
   ANALYSIS: {
     REPORT: "report",

@@ -3,7 +3,7 @@
  * 静的アセットをキャッシュし、オフライン閲覧をサポート
  */
 
-const CACHE_NAME = "aibuilder-pwa-v14";
+const CACHE_NAME = "aibuilder-pwa-v15";
 
 const PRECACHE = [
   "/",
@@ -54,10 +54,25 @@ const PRECACHE = [
   "/js/thinkingEngine/schemas/index.js",
   "/js/thinkingEngine/schemas/types.js",
   "/js/thinkingEngine/schemas/proposalDoc.js",
+  "/js/thinkingEngine/schemas/snsImage.js",
+  "/js/thinkingEngine/schemas/newsletterLine.js",
+  "/js/thinkingEngine/schemas/salesTalk.js",
+  "/js/thinkingEngine/schemas/popPromo.js",
+  "/js/thinkingEngine/blueprints/_shared.js",
   "/js/thinkingEngine/blueprints/proposalDoc.js",
+  "/js/thinkingEngine/blueprints/snsImage.js",
+  "/js/thinkingEngine/blueprints/newsletterLine.js",
+  "/js/thinkingEngine/blueprints/salesTalk.js",
+  "/js/thinkingEngine/blueprints/popPromo.js",
+  "/js/thinkingEngine/deliverables/registry.js",
   "/js/thinkingEngine/rubrics/proposalQuality.js",
   "/js/thinkingEngine/renderers/proposalDeliverable.js",
+  "/js/thinkingEngine/renderers/snsImageDeliverable.js",
+  "/js/thinkingEngine/renderers/newsletterLineDeliverable.js",
+  "/js/thinkingEngine/renderers/salesTalkDeliverable.js",
+  "/js/thinkingEngine/renderers/popPromoDeliverable.js",
   "/js/thinkingEngine/core/pipeline/proposalPipeline.js",
+  "/js/thinkingEngine/core/pipeline/deliverablePipeline.js",
   "/js/meeting/meetingApp.js",
   "/js/meeting/roles.js",
   "/js/meeting/discussionEngine.js",

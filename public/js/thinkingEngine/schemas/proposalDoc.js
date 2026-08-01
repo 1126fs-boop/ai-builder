@@ -115,6 +115,30 @@ export const PROPOSAL_DOC_SCHEMA = {
   categoryId: "proposal",
   label: "提案書作成",
   seedQuestions: PROPOSAL_SEED_QUESTIONS,
+  dynamicQuestions: PROPOSAL_DYNAMIC_QUESTIONS,
   dynamicRules: PROPOSAL_DYNAMIC_RULES,
   maxDynamicQuestions: 3,
+  inferDefaults(answers) {
+    const scope = answers.proposal_scope || "ソリューション提案書（初回）";
+    const inferred = {
+      output_format: scope.includes("プレゼン") ? "スライド構成" : "提案書全文",
+      tone: scope.includes("既存") ? "信頼・継続関係" : "説得力重視",
+    };
+    if (!answers.product_area?.trim()) {
+      if (answers.client_challenge === "スタッフ育成・採用") inferred.product_area = "経営支援・教育";
+      else if (answers.client_challenge === "客単価アップ") inferred.product_area = "化粧品・店販";
+    }
+    return inferred;
+  },
+  estimateQuality(answers, pending) {
+    let s = 0.4;
+    if (answers.industry) s += 0.15;
+    if (answers.client_challenge) s += 0.15;
+    if (answers.proposal_scope) s += 0.15;
+    if (answers.product_area) s += 0.1;
+    if (answers.client_context?.trim()) s += 0.15;
+    if (answers.hearing_notes?.trim()) s += 0.1;
+    s -= pending * 0.05;
+    return Math.min(1, Math.max(0, Math.round(s * 100) / 100));
+  },
 };

@@ -2,7 +2,7 @@
  * AI Builder — PWA 登録
  */
 
-const SW_URL = "/sw.js?v=14";
+const SW_URL = "/sw.js?v=15";
 
 export function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
