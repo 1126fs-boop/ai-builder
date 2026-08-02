@@ -12,7 +12,9 @@
     "lint": "next lint",
     "generate:icons": "node scripts/generate-pwa-icons.mjs",
     "check:env": "node scripts/check-env.mjs",
-    "setup:env": "node scripts/setup-env.mjs"
+    "setup:env": "node scripts/setup-env.mjs",
+    "quality:gate": "node scripts/quality-gate.mjs",
+    "quality:category-flow": "node scripts/quality-gate-category-flow.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",

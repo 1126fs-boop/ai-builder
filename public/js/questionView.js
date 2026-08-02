@@ -59,24 +59,38 @@ function handleWizardKeydown(e) {
 }
 
 export function startCategory(categoryId) {
-  const category = getCategory(categoryId);
-  if (!category) return;
+  try {
+    const category = getCategory(categoryId);
+    if (!category) {
+      console.error("[questionView] 未知のカテゴリ:", categoryId);
+      return;
+    }
 
-  state.categoryId = categoryId;
-  resetFlow();
-  state.categoryId = categoryId;
+    state.categoryId = categoryId;
+    resetFlow();
+    state.categoryId = categoryId;
 
-  if (hasSchemaFlow(categoryId)) {
-    state.questionFlow = [...getSeedQuestions(categoryId)];
-    state.gapAnalysisDone = false;
-    state.inferredAnswers = {};
+    if (hasSchemaFlow(categoryId)) {
+      state.questionFlow = [...getSeedQuestions(categoryId)];
+      state.gapAnalysisDone = false;
+      state.inferredAnswers = {};
+    }
+
+    if (!DOM.wizardCategory) {
+      console.error("[questionView] #wizard-category が見つかりません");
+      return;
+    }
+
+    DOM.wizardCategory.textContent = `${category.icon} ${category.label}`;
+    addRecentCategory(categoryId).catch((err) => {
+      console.warn("[questionView] 最近使ったカテゴリ保存失敗", err);
+    });
+
+    renderQuestion();
+    showView("questions");
+  } catch (err) {
+    console.error("[questionView] startCategory failed", err);
   }
-
-  DOM.wizardCategory.textContent = `${category.icon} ${category.label}`;
-  addRecentCategory(categoryId);
-
-  renderQuestion();
-  showView("questions");
 }
 
 /** 現在の質問リスト（Schema フロー or 従来） */
