@@ -12,6 +12,7 @@ import {
   buildImageDirective,
   formatSynthesisHints,
   buildAnalysisReflectionBlock,
+  buildKnowledgePromptBlock,
   DEFAULT_CONSTRAINTS,
 } from "./_shared.js";
 
@@ -44,12 +45,18 @@ export function buildPopPromoPrompts(blueprint) {
 
   const productBlock = buildProductKnowledgeBlock(product, answers);
   const principlesBlock = brief ? buildCreativeDesignPrinciplesBlock(brief) : "";
+  const knowledgeBlock = buildKnowledgePromptBlock(bp);
+
+  const headlineBlock = (bp.headlineVariants || [bp.headline]).map((h, i) => `${i + 1}. ${h}`).join("\n");
+  const hierarchyBlock = (bp.copyHierarchy || []).map((c) => `- ${c}`).join("\n");
 
   const textPrompt = `# 依頼
-${bp.usage}の【オリジナル販促クリエイティブ】制作指示書を作成してください。
+${bp.usage}の【オリジナル販促クリエイティブ】制作指示書を、美容業界プロの販促デザイナーレベルで作成してください。
 公式HPのデザインを再現せず、公式素材を使った新しい販促物を設計してください。
 
 ${productBlock}
+
+${knowledgeBlock}
 
 ${principlesBlock}
 
@@ -61,9 +68,14 @@ ${buildAnalysisReflectionBlock(bp)}
 【サイズ】${bp.sizeFormat}
 【トーン】${bp.style}
 【経営課題】${bp.challenge?.surfaceChallenge ?? ""}
+【季節性】${bp.seasonalHook || ""}
+【レイアウト】${bp.layoutHint || ""}
 
-# ヘッドライン
-${bp.headline}
+# コピー階層
+${hierarchyBlock}
+
+# ヘッドライン案（3秒ルール）
+${headlineBlock}
 
 # サブコピー
 ${bp.subCopy}

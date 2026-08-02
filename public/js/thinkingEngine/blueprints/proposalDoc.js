@@ -6,6 +6,7 @@
 
 import { evaluateProposalBlueprint } from "../rubrics/proposalQuality.js";
 import { resolveBlueprintInputs } from "./_context.js";
+import { buildProposalEnhancements } from "./categoryEnhancers.js";
 
 function runLensReviews(inputs, blueprint) {
   const { answers, purpose, challenge } = inputs;
@@ -63,6 +64,7 @@ export function buildProposalBlueprint(ctx) {
   const surfaceChallenge = challenge.surfaceChallenge;
   const scope = answers.proposal_scope || "ソリューション提案書（初回）";
   const productArea = answers.product_area || answers._inferred?.product_area || "複合提案";
+  const enhanced = buildProposalEnhancements(challenge, answers, productArea);
 
   const blueprint = {
     useCaseId: "proposal_doc",
@@ -79,7 +81,14 @@ export function buildProposalBlueprint(ctx) {
     impact: challenge.impact,
     before: challenge.beforeHypothesis,
     after: challenge.afterHypothesis,
-    proposalStory: `${industry}の${surfaceChallenge}は、${challenge.rootCause}が背景にある。${productArea}による経営改善提案として、Before/Afterを明示する。`,
+    proposalStory: enhanced.proposalStoryEnhanced,
+    proposalStorySummary: `${industry}の${surfaceChallenge}は、${challenge.rootCause}が背景にある。${productArea}による経営改善提案として、Before/After・ROI・導入ステップを明示する。`,
+    roiSection: enhanced.roiSection,
+    implementationPhases: enhanced.implementationPhases,
+    differentiationPoints: enhanced.differentiationPoints,
+    analysisDepth: enhanced.analysisDepth,
+    kpiExamples: enhanced.kpiExamples,
+    competitiveDiff: enhanced.competitiveDiff,
     measures: buildMeasures(challenge, productArea),
     objections: buildObjections(challenge),
     kpi: challenge.impact,

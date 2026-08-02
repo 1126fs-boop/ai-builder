@@ -7,6 +7,7 @@ import {
   evaluateDeliverableQuality,
 } from "./_shared.js";
 import { resolveBlueprintInputs } from "./_context.js";
+import { buildNewsletterEnhancements } from "./categoryEnhancers.js";
 
 /**
  * @param {Object} ctx AnalysisContext エンベロープ
@@ -22,6 +23,7 @@ export function buildNewsletterLineBlueprint(ctx) {
   const tone = purpose.tone || "プロフェッショナル";
   const isLine = channel.includes("LINE") && !channel.includes("メルマガ");
   const isBoth = channel.includes("両方");
+  const enhanced = buildNewsletterEnhancements(answers, challenge, purpose);
 
   const blueprint = {
     useCaseId: "newsletter_line",
@@ -36,30 +38,28 @@ export function buildNewsletterLineBlueprint(ctx) {
     topic,
     tone,
     impact: challenge.impact,
-    openingHook: `${audience}の${value}（${challenge.surfaceChallenge}）に直結する情報を、押し売りなく届ける`,
-    subjectLines: [
-      `【${value}】${topic}のご案内`,
-      `${audience}様へ｜${purposeLabel.replace(/・.*/, "")}のお知らせ`,
-      `【限定】${topic} — ${challenge.surfaceChallenge}改善のヒント`,
-    ],
-    bodyStructure: [
-      "挨拶・配信目的（1段落）",
-      "読者の課題への共感",
-      "提供価値・具体施策",
-      "事例または数字イメージ",
-      "CTA（1つ）",
-    ],
+    seasonalContext: enhanced.seasonalContext,
+    openingHook: `${audience}の${value}（${challenge.surfaceChallenge}）— ${enhanced.seasonalContext.label}の${enhanced.ownerConcerns[0]}に触れる3行フック`,
+    subjectLines: enhanced.subjectLines,
+    preheader: enhanced.preheader,
+    bodyStructure: enhanced.bodyStructure,
+    educationalAngle: enhanced.educationalAngle,
+    softSellBridge: enhanced.softSellBridge,
+    psHint: enhanced.psHint,
+    readingFlow: enhanced.readingFlow,
+    ownerInfoTopics: enhanced.ownerInfoTopics,
     lineVersion: "300字以内。短文・改行多め。絵文字控えめ。CTA1つ。",
+    lineRules: enhanced.seasonalContext ? ["季節性を1文入れる", "300字以内", "CTA1つ"] : [],
     cta: purposeLabel.includes("セミナー") ? "セミナーお申し込み" : "資料請求・お問い合わせ",
     constraintsSummary: purpose.constraints?.map((c) => `- ${c}`).join("\n") ?? "",
     outputFormat: answers.output_format || "件名3+本文",
     improvementPoints: purpose.successCriteria ?? [],
     sections: structure.sections?.length ? structure.sections : (
       isBoth
-        ? ["件名3案", "メール本文", "LINE短文", "CTA"]
+        ? ["件名5案", "プレヘッダー", "メール本文（教育型）", "ソフトセル", "LINE短文", "CTA", "PS"]
         : isLine
           ? ["LINE本文", "CTA"]
-          : ["件名3案", "メール本文", "CTA"]
+          : ["件名5案", "プレヘッダー", "メール本文（教育型）", "ソフトセル", "CTA", "PS"]
     ),
   };
 
@@ -76,7 +76,9 @@ export function buildNewsletterLineBlueprint(ctx) {
     { id: "audience", label: "配信先", pass: Boolean(answers.audience) },
     { id: "value", label: "提供価値", pass: Boolean(answers.value) },
     { id: "challenge", label: "経営課題分析", pass: challenge.confidence >= 0.5 },
-    { id: "subject", label: "件名案", pass: blueprint.subjectLines.length >= 3 },
+    { id: "subject", label: "件名案", pass: blueprint.subjectLines.length >= 5 },
+    { id: "education", label: "教育型構成", pass: Boolean(blueprint.educationalAngle) },
+    { id: "season", label: "季節性", pass: Boolean(blueprint.seasonalContext) },
     { id: "cta", label: "CTA", pass: Boolean(blueprint.cta) },
     { id: "structure", label: "構成", pass: blueprint.bodyStructure.length >= 4 },
   ]);

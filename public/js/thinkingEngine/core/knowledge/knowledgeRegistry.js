@@ -14,6 +14,12 @@ import { resolveProductFromAnswers, getProductImageMode } from "../../../../wamP
 import { WAM_IMAGE_GENERATION_RULES } from "../../../../wamImageContext.js";
 import { WAM_BRAND_RULES, WAM_BRAND_TONE, WAM_USP, WAM_WORLDVIEW } from "./wamKnowledgeBase.js";
 import { getLearnedInsightsForAnalysis } from "./learningRegistry.js";
+import {
+  getDomainKnowledgeForCategory,
+  buildDomainKnowledgeBlock,
+} from "./industryKnowledgeBase.js";
+import { buildCategoryKnowledgeSnapshot } from "./categoryKnowledgeRegistry.js";
+import { getTrendsForCategorySync } from "./trendsKnowledgeStore.js";
 import { LEARNED_KNOWLEDGE_ENABLED } from "./knowledgeTypes.js";
 import { generatePersistableId } from "../types/persistable.js";
 
@@ -130,6 +136,9 @@ export function buildKnowledgeSnapshot(categoryId, answers, challenge) {
   }
 
   const learned = getLearnedInsightsForAnalysis(categoryId);
+  const domainKnowledge = getDomainKnowledgeForCategory(categoryId);
+  const categoryKnowledge = buildCategoryKnowledgeSnapshot(categoryId, answers);
+  const trends = getTrendsForCategorySync(categoryId);
 
   return {
     industryFacts,
@@ -138,6 +147,9 @@ export function buildKnowledgeSnapshot(categoryId, answers, challenge) {
     brandTone: WAM_BRAND_TONE,
     usp: WAM_USP,
     worldview: WAM_WORLDVIEW,
+    domainKnowledge,
+    categoryKnowledge,
+    trends,
     learned,
     salesPrinciples: [...SALES_KNOW_HOW, DEFAULT_THINKING_PROCESS.split("\n")[0]],
     antiPatterns,
@@ -147,6 +159,11 @@ export function buildKnowledgeSnapshot(categoryId, answers, challenge) {
     ],
     refs,
   };
+}
+
+/** Prompt Builder 用 — 統合ナレッジブロック */
+export function buildFullKnowledgeBlock(categoryId, knowledgeSnapshot) {
+  return buildDomainKnowledgeBlock(categoryId, knowledgeSnapshot);
 }
 
 /** 登録済みナレッジ一覧（デバッグ・将来管理UI用） */

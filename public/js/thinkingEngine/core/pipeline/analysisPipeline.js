@@ -11,6 +11,8 @@ import { analyzeGaps, emptyGapAnalysis } from "../analyzers/gapAnalyzer.js";
 import { runLensEngine } from "../analyzers/lensEngine.js";
 import { planStructure } from "../analyzers/structurePlanner.js";
 import { buildKnowledgeSnapshot } from "../knowledge/knowledgeRegistry.js";
+import { applyKnowledgeToBlueprint } from "../knowledge/knowledgeApplicator.js";
+import { buildAnalysisIntelligence } from "../analyzers/analysisIntelligence.js";
 import { createAnalysisContext } from "../types/analysisContext.js";
 import { generatePersistableId } from "../types/persistable.js";
 
@@ -59,7 +61,37 @@ export function runAnalysisPipeline(categoryId, answers, options = {}) {
   const mergedAnswers = { ...gap.inferredAnswers, ...answers, _inferred: gap.inferredAnswers };
 
   const knowledge = buildKnowledgeSnapshot(categoryId, mergedAnswers, challenge);
+  knowledge.appliedKnowledge = applyKnowledgeToBlueprint(categoryId, knowledge, challenge, purpose);
+  knowledge.appliedHints = knowledge.appliedKnowledge?.directives ?? [];
+
+  if (knowledge.appliedKnowledge?.successCriteriaBoost?.length) {
+    purpose.successCriteria = [
+      ...(purpose.successCriteria ?? []),
+      ...knowledge.appliedKnowledge.successCriteriaBoost,
+    ].slice(0, 8);
+  }
+
+  knowledge.analysisIntelligence = buildAnalysisIntelligence(
+    categoryId,
+    knowledge,
+    challenge,
+    purpose,
+    mergedAnswers
+  );
+
+  if (knowledge.analysisIntelligence?.qualitySuccessCriteria?.length) {
+    purpose.successCriteria = [
+      ...(purpose.successCriteria ?? []),
+      ...knowledge.analysisIntelligence.qualitySuccessCriteria,
+    ].slice(0, 10);
+  }
+
   phases.push({ id: "knowledge", label: "Knowledge参照", ok: true });
+  phases.push({
+    id: "intelligence",
+    label: "統合分析（KB+トレンド+学習+ルーブリック）",
+    ok: Boolean(knowledge.analysisIntelligence),
+  });
 
   const { lensReviews, synthesis } = runLensEngine(categoryId, { purpose, challenge, knowledge });
   phases.push({ id: "lens", label: "多視点レビュー", ok: lensReviews.length >= 2 });

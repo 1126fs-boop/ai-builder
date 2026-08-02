@@ -12,6 +12,7 @@ import {
   buildImageDirective,
   formatSynthesisHints,
   buildAnalysisReflectionBlock,
+  buildKnowledgePromptBlock,
   DEFAULT_CONSTRAINTS,
 } from "./_shared.js";
 
@@ -43,12 +44,15 @@ export function buildSnsImagePrompts(blueprint) {
 
   const productBlock = buildProductKnowledgeBlock(product, answers);
   const creativeBlock = brief ? buildCreativeDesignPrinciplesBlock(brief) : "";
+  const knowledgeBlock = buildKnowledgePromptBlock(bp);
 
   const textPrompt = `# 依頼
 ${bp.snsFormat}用の【オリジナル販促クリエイティブ】（キャプション+コピー+デザイン指示）を作成してください。
 公式HPのデザインを再現するのではなく、公式素材を使った新しいクリエイティブを設計してください。
 
 ${productBlock}
+
+${knowledgeBlock}
 
 ${creativeBlock}
 

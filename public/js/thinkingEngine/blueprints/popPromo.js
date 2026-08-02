@@ -7,6 +7,7 @@ import {
   evaluateDeliverableQuality,
 } from "./_shared.js";
 import { resolveBlueprintInputs } from "./_context.js";
+import { buildPopEnhancements } from "./categoryEnhancers.js";
 
 /**
  * @param {Object} ctx AnalysisContext エンベロープ
@@ -21,6 +22,7 @@ export function buildPopPromoBlueprint(ctx) {
   const size = answers.size_format || "A4縦";
   const style = purpose.tone || "高級感・信頼感";
   const brief = creativeBrief ?? structure?.creativeBrief ?? null;
+  const enhanced = buildPopEnhancements(answers, challenge, purpose);
 
   const blueprint = {
     useCaseId: "pop_promo",
@@ -38,8 +40,13 @@ export function buildPopPromoBlueprint(ctx) {
     sizeFormat: size,
     style,
     impact: challenge.impact,
-    headline: `${appeal}を実現する${product}`,
-    subCopy: `${challenge.surfaceChallenge}（${challenge.impact}）の課題解決を支援`,
+    seasonalHook: enhanced.seasonalHook,
+    headline: enhanced.headlineVariants[0],
+    headlineVariants: enhanced.headlineVariants,
+    subCopy: enhanced.subCopyVariants[0],
+    subCopyVariants: enhanced.subCopyVariants,
+    copyHierarchy: enhanced.copyHierarchy,
+    layoutHint: enhanced.layoutHint,
     creativeDirections: brief
       ? [
           `用途: ${brief.formatLabel} — 公式HPデザインは再現しない`,

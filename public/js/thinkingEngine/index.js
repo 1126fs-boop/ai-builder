@@ -147,8 +147,40 @@ export {
   registerKnowledgeItem,
   registerCompanyRule,
   buildKnowledgeSnapshot,
+  buildFullKnowledgeBlock,
   listKnowledgeItems,
 } from "./core/knowledge/knowledgeRegistry.js";
+export {
+  applyKnowledgeToBlueprint,
+  enrichBlueprintWithKnowledge,
+  formatAppliedHintsForPrompt,
+} from "./core/knowledge/knowledgeApplicator.js";
+export {
+  getDomainKnowledgeForCategory,
+  buildDomainKnowledgeBlock,
+  DOMAIN_REGISTRY,
+} from "./core/knowledge/industryKnowledgeBase.js";
+export {
+  getSeasonalContext,
+  buildCategoryPlaybookBlock,
+  NEWSLETTER_PLAYBOOK,
+  PROPOSAL_PLAYBOOK,
+  SALES_PLAYBOOK,
+  POP_PLAYBOOK,
+} from "./core/knowledge/categoryPlaybooks.js";
+export {
+  getCategoryKnowledgeMeta,
+  buildCategoryKnowledgeBlock,
+  buildCategoryKnowledgeSnapshot,
+  CATEGORY_KB_META,
+} from "./core/knowledge/categoryKnowledgeRegistry.js";
+export {
+  fetchTrendsKnowledge,
+  initTrendsKnowledge,
+  registerTrendUpdate,
+  buildTrendsKnowledgeBlock,
+  getTrendsForCategorySync,
+} from "./core/knowledge/trendsKnowledgeStore.js";
 export {
   registerSuccessCase,
   registerUserRevision,
@@ -156,8 +188,26 @@ export {
   registerIndustryInsight,
   getLearnedInsightsForAnalysis,
   listLearningRecords,
+  getLearningStats,
+  getCategoryLearningStats,
+  initLearningRegistry,
+  learnFromGeneration,
+  learnFromSave,
+  learnFromUserEdit,
 } from "./core/knowledge/learningRegistry.js";
 export { runQualityGate, QUALITY_PASS_THRESHOLD } from "./core/quality/rubricFramework.js";
+export {
+  getCategoryRubricProfile,
+  buildRubricQualityBlock,
+  learnRubricFromQualityGate,
+  learnRubricFromUserEdit,
+  learnRubricFromHighRating,
+} from "./core/quality/rubricLearningRegistry.js";
+export { CATEGORY_RUBRIC_PROFILES, getBaseRubricProfile } from "./core/quality/categoryRubricProfiles.js";
+export {
+  buildAnalysisIntelligence,
+  formatAnalysisIntelligenceSummary,
+} from "./core/analyzers/analysisIntelligence.js";
 export { buildHandoff, buildImageGenerationHandoff, getAdapter, listAdapters } from "./adapters/registry.js";
 
 // ── 共通ユーティリティ ──

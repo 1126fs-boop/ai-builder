@@ -28,7 +28,8 @@ import { withTimeout } from "./asyncUtils.js";
 import { buildHandoff } from "./thinkingEngine/index.js";
 import { openaiImagesAdapter } from "./thinkingEngine/adapters/openaiImagesAdapter.js";
 import { generateImageFromPrompt } from "./imageGenerationService.js";
-import { openChatGptApp, getChatGptHandoffMessage } from "./chatgptHandoff.js";
+import { handoffPromptToChatGptApp } from "./chatgptHandoff.js";
+import { onPromptAdopted } from "./learningBridge.js";
 
 const LOG = "[resultView]";
 const GENERATION_TIMEOUT_MS = 15000;
@@ -41,6 +42,8 @@ let currentSavedId = null;
 let currentGeneratedPrompt = null;
 /** @type {string|null} */
 let currentImageBlobUrl = null;
+/** 生成直後のオリジナルプロンプト（修正学習用） */
+let originalPromptText = "";
 
 export function initResultView(handlers) {
   onGoHome = handlers.onGoHome;
@@ -186,6 +189,9 @@ function renderResult(item) {
   DOM.resultTitle.textContent = item.title;
   DOM.resultCategoryLabel.textContent = `${getCategory(item.category)?.icon || "📄"} ${item.categoryLabel}`;
   DOM.promptOutput.textContent = item.prompt;
+  originalPromptText = item.prompt ?? "";
+  DOM.promptOutput.setAttribute("contenteditable", "true");
+  DOM.promptOutput.setAttribute("title", "クリックして編集できます。修正内容は学習に反映されます。");
   DOM.recommendedAi.textContent = quality.recommendedAi;
 
   DOM.qualityStars.textContent = formatStars(quality.score);
@@ -301,7 +307,24 @@ function revokeImageBlob() {
   }
 }
 
-/** ChatGPT アプリで開く（プロンプト事前コピー済み） */
+/** 現在表示中のプロンプト（編集反映） */
+function getCurrentPromptText() {
+  return DOM.promptOutput?.textContent?.trim() ?? "";
+}
+
+/** 修正があればカテゴリ別学習 */
+function learnIfPromptEdited(action) {
+  const revised = getCurrentPromptText();
+  if (!revised || !originalPromptText || revised === originalPromptText) return;
+  onPromptAdopted({
+    categoryId: state.categoryId,
+    original: originalPromptText,
+    revised,
+    action,
+  });
+}
+
+/** ChatGPT アプリで開く */
 export async function handoffToChatgpt() {
   const gp = currentGeneratedPrompt;
   if (!gp) {
@@ -311,9 +334,10 @@ export async function handoffToChatgpt() {
 
   try {
     const handoff = buildHandoff(gp, "chatgpt");
-    await copyToClipboard(handoff.text);
-    const { platform } = openChatGptApp();
-    showToast(getChatGptHandoffMessage(platform));
+    const promptText = getCurrentPromptText() || handoff.text;
+    learnIfPromptEdited("handoff");
+    const result = await handoffPromptToChatGptApp(promptText);
+    showToast(result.ok ? result.message : result.message || "Handoff に失敗しました");
   } catch (err) {
     showToast(err instanceof Error ? err.message : "Handoff に失敗しました");
   }
@@ -379,7 +403,9 @@ export function downloadResultImage() {
 }
 
 export async function copyPrompt() {
-  await copyToClipboard(DOM.promptOutput.textContent);
+  const text = getCurrentPromptText();
+  learnIfPromptEdited("copy");
+  await copyToClipboard(text);
   DOM.btnCopy.classList.add("btn--copied");
   DOM.btnCopyLabel.textContent = "コピーしました！";
   showToast("クリップボードにコピーしました");

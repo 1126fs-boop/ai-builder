@@ -1,12 +1,15 @@
 /**
- * Knowledge — 型定義 & レイヤー構造
- *
- * 美容業界知識・営業ノウハウ・会社独自ルールを拡張可能なレイヤーで管理。
- * 将来: learned レイヤーに成功事例・高評価 Blueprint を蓄積。
+ * Knowledge Types — 学習・レイヤー定義
  */
 
+/** 学習ナレッジを AnalysisContext / Blueprint へ反映 */
+export const LEARNED_KNOWLEDGE_ENABLED = true;
+
+/** 高評価とみなす品質スコア閾値（0〜100） */
+export const HIGH_RATED_SCORE_THRESHOLD = 80;
+
 /**
- * @typedef {"industry"|"sales"|"company"|"product"|"learned"} KnowledgeLayerId
+ * @typedef {"industry"|"sales"|"company"|"product"|"learned"|"domain"} KnowledgeLayerId
  */
 
 /**
@@ -16,9 +19,6 @@
  * @property {string} key
  * @property {string|string[]|Object} value
  * @property {string[]} [tags]
- * @property {string} [source] 出典（domainKnowledge / admin / learned）
+ * @property {string} [source]
  * @property {number} [priority]
  */
-
-/** 将来の学習ナレッジ用プレースホルダー */
-export const LEARNED_KNOWLEDGE_ENABLED = false;

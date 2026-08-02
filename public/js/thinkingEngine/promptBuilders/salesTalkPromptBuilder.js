@@ -3,7 +3,7 @@
  */
 
 import { unwrapBlueprint } from "../core/types/blueprint.js";
-import { buildSystemPrompt, formatSynthesisHints, DEFAULT_CONSTRAINTS } from "./_shared.js";
+import { buildSystemPrompt, formatSynthesisHints, buildKnowledgePromptBlock, DEFAULT_CONSTRAINTS } from "./_shared.js";
 
 export function buildSalesTalkPrompts(blueprint) {
   const bp = unwrapBlueprint(blueprint);
@@ -16,15 +16,27 @@ export function buildSalesTalkPrompts(blueprint) {
   const lensBlock = (bp.lensReviews || [])
     .map((l) => `- ${l.focus}: ${l.insight}`)
     .join("\n");
+  const knowledgeBlock = buildKnowledgePromptBlock(bp);
+
+  const icebreakBlock = (bp.icebreakers || [bp.opening]).map((s, i) => `${i + 1}. ${s}`).join("\n");
+  const deepBlock = (bp.deepDiveQuestions || []).map((q, i) => `${i + 1}. ${q}`).join("\n");
+  const phasesBlock = (bp.salesPhases || []).map((p, i) => `${i + 1}. ${p}`).join("\n");
 
   const systemPrompt = buildSystemPrompt({
     role: "美容業界BtoB営業のプロフェッショナル（商談・テレアポ・DM対応）",
     mission: purpose.primaryGoal || `${bp.salesType}で${bp.goal}`,
-    constraints: [...DEFAULT_CONSTRAINTS, "商品説明から入らない", "共感→ヒアリング→提案→CTA"],
+    constraints: [
+      ...DEFAULT_CONSTRAINTS,
+      "商品説明から入らない",
+      "アイスブレイク→SPINヒアリング→深掘り→提案→反論→クロージング",
+      "反論処理は4パターン以上",
+    ],
   });
 
   const textPrompt = `# 依頼
-${bp.salesType}用の営業トーク台本を作成してください。
+${bp.salesType}用の営業トーク台本を、美容業界のトップ営業が設計したレベルの品質で作成してください。
+
+${knowledgeBlock}
 
 【業種】${bp.industry}
 【課題（表面）】${bp.surfaceChallenge}
@@ -32,16 +44,25 @@ ${bp.salesType}用の営業トーク台本を作成してください。
 【業種特性】${bp.industryContext}
 【ゴール】${bp.goal}
 
+# 商談フェーズ
+${phasesBlock}
+
+# アイスブレイク
+${icebreakBlock}
+
+# ラポール
+${bp.rapportNote || "相手の話を最優先。商品説明は課題整理後"}
+
+# SPIN ヒアリング
+${hearingBlock}
+
+# 深掘り質問
+${deepBlock}
+
 # 提案ストーリー
 ${bp.proposalStory}
 
-# 冒頭（共感）
-${bp.opening}
-
-# ヒアリング3問
-${hearingBlock}
-
-# 反論処理
+# 反論処理（4パターン以上）
 ${objectionBlock}
 
 # クロージング

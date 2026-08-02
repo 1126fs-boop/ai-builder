@@ -1,0 +1,61 @@
+{
+  "version": "2026-08-01",
+  "updatedAt": "2026-08-01T00:00:00.000Z",
+  "description": "時間とともに更新するトレンド・アルゴリズム・マーケティング知識。管理画面またはJSON差し替えで更新可能。",
+  "global": [
+    {
+      "id": "ig_save_2026",
+      "topic": "Instagram",
+      "text": "2026年: 保存率・シェア率がリーチの主指標。コメント数より「保存→後で見る」設計を優先",
+      "tags": ["instagram", "sns"]
+    },
+    {
+      "id": "beauty_b2b_trust",
+      "topic": "美容BtoB",
+      "text": "押し売り・煽りは逆効果。教育型コンテンツ→信頼→問い合わせの順が有効",
+      "tags": ["beauty", "newsletter", "sales"]
+    }
+  ],
+  "byCategory": {
+    "sns": [
+      {
+        "id": "sns_reels_2026",
+        "text": "リール: 最初1秒で課題フック。テロップ大きめ・縦型9:16",
+        "priority": 90
+      },
+      {
+        "id": "sns_design_trend",
+        "text": "代理店風クリエイティブ: 非対称構図・大胆色面・editorial typography がBtoBでも差別化に有効",
+        "priority": 80
+      }
+    ],
+    "newsletter": [
+      {
+        "id": "mail_open_rate",
+        "text": "BtoBメルマガ: 件名に課題ワード+数字。火・水・木 10時前後が開封率高め傾向",
+        "priority": 85
+      }
+    ],
+    "proposal": [
+      {
+        "id": "roi_conservative",
+        "text": "ROI試算は保守的に。PoC期間を明示すると決裁者の不安が減る",
+        "priority": 90
+      }
+    ],
+    "sales": [
+      {
+        "id": "spin_depth",
+        "text": "Implication（放置した場合の影響）まで聞くと提案の説得力が上がる",
+        "priority": 85
+      }
+    ],
+    "image": [
+      {
+        "id": "pop_contrast",
+        "text": "店頭POP: 背景と文字のコントラスト比を高く。3m離れて読めるサイズ感",
+        "priority": 80
+      }
+    ]
+  }
+}

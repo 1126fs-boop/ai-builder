@@ -25,6 +25,7 @@ import { registerServiceWorker } from "./pwa.js";
 import { initStorage } from "./storage.js";
 import { initAuthBar } from "./authBar.js";
 import { initProducts } from "../wamProducts.js";
+import { initLearning } from "./learningBridge.js";
 
 function goHome() {
   resetAll();
@@ -33,6 +34,7 @@ function goHome() {
 }
 
 async function init() {
+  initLearning();
   await Promise.all([initStorage(), initProducts()]);
   await initAuthBar();
 

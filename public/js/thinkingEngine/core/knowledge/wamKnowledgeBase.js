@@ -7,6 +7,13 @@
 
 import { WAM_OFFICIAL_SITE, WAM_PRODUCT_INDEX, resolveProductFromAnswers } from "../../../../wamProducts.js";
 
+/** 公式HP — 正規の商品画像取得元（デザインテンプレートではない） */
+export const WAM_OFFICIAL_IMAGE_SOURCE = {
+  role: "正規の商品画像取得元",
+  notUsedFor: ["レイアウト", "配色", "タイポグラフィ", "HPデザインの再現"],
+  usedFor: ["商品名", "公式説明", "USP", "ブランドトーン", "公式商品画像URL"],
+};
+
 /** 公式HPから取得してよい情報（Knowledge Base のみ） */
 export const WAM_KB_FROM_HP = [
   "商品名・カテゴリ・公式説明文・USP",

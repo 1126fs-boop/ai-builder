@@ -4,6 +4,7 @@
 
 import { getSupabase, isCloudEnabled, getCurrentUser, SAVED_EMAIL_KEY } from "./supabaseClient.js";
 import { withTimeout } from "./asyncUtils.js";
+import { onPromptSaved, onFavoriteChanged } from "./learningBridge.js";
 
 const LOG = "[storage]";
 const CLOUD_TIMEOUT_MS = 12000;
@@ -307,6 +308,7 @@ export async function saveAI(data) {
       .catch((err) => {
         console.error(`${LOG} saveAI: background cloud save failed`, err);
       });
+    onPromptSaved(item);
     return item;
   }
 
@@ -315,6 +317,7 @@ export async function saveAI(data) {
     _cache.map(({ isFavorite, ...rest }) => rest)
   );
   console.log(`${LOG} saveAI: local save success`, { id: item.id });
+  onPromptSaved(item);
   return item;
 }
 
@@ -474,6 +477,7 @@ export async function toggleFavorite(id) {
     write(KEYS.FAVORITES, favs);
   }
 
+  onFavoriteChanged(item, nowFav);
   return nowFav;
 }
 

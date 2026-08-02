@@ -32,11 +32,22 @@ const DEFAULT_SECTIONS = {
     "ハッシュタグ",
     "CTA",
   ],
-  newsletter: ["件名3案", "メール本文", "CTA"],
+  newsletter: [
+    "件名5案（開封率重視）",
+    "プレヘッダー",
+    "冒頭フック（3行）",
+    "教育型本文",
+    "ソフトセル（商品提案への橋渡し）",
+    "CTA",
+    "PS（追伸）",
+  ],
   sales: [
-    "冒頭（共感）",
-    "ヒアリング3問",
-    "課題整理",
+    "アイスブレイク",
+    "ラポール構築",
+    "状況確認（SPIN-S）",
+    "課題ヒアリング（SPIN-P/I）",
+    "深掘り質問",
+    "課題整理・要約",
     "提案ストーリー",
     "反論処理",
     "クロージング",
@@ -51,11 +62,11 @@ const DEFAULT_SECTIONS = {
 };
 
 const NARRATIVE_BY_CATEGORY = {
-  proposal: "共感→現状分析→課題深掘り→Before/After→提案→施策→ROI→CTA",
+  proposal: "共感→現状分析→課題深掘り→Before/After→ROI→導入ステップ→差別化→CTA",
   sns: "1行目フック→課題共感→商品価値→CTA",
-  newsletter: "挨拶→共感→価値→具体→CTA",
-  sales: "共感→ヒアリング→課題整理→提案→反論処理→クロージング",
-  image: "ヘッドライン→訴求→オリジナルクリエイティブ→シーン（商品は公式画像）",
+  newsletter: "件名フック→共感3行→教育型価値→ソフトセル→CTA→PS",
+  sales: "アイスブレイク→SPINヒアリング→深掘り→課題整理→提案→反論→クロージング",
+  image: "ヘッドライン→訴求→季節性→オリジナルクリエイティブ→CTA",
 };
 
 /**
@@ -108,13 +119,47 @@ export function planStructure(categoryId, input) {
 }
 
 function buildCopyStrategy(categoryId, purpose, challenge) {
-  return {
-    hook: categoryId === "sns" ? "課題共感（3秒）" : "経営課題への共感",
+  const base = {
+    hook: "経営課題への共感",
     body: `${challenge.surfaceChallenge}→${challenge.impact}`,
     cta: "1つに絞る",
     avoid: ["商品スペックから入る", "AIっぽい表現", "公式HPデザインの再現"],
     successCriteria: purpose.successCriteria ?? [],
   };
+
+  if (categoryId === "sns") {
+    return { ...base, hook: "課題共感（3秒）", framework: "PAS" };
+  }
+  if (categoryId === "newsletter") {
+    return {
+      ...base,
+      hook: "件名+冒頭3行で開封・続読",
+      framework: "AIDA",
+      educationFirst: true,
+      softSell: "教育パート後に自然な橋渡し",
+    };
+  }
+  if (categoryId === "proposal") {
+    return {
+      ...base,
+      hook: "取引先課題への共感",
+      framework: "BAB",
+      roiRequired: true,
+      differentiation: "経営課題解決の切り口",
+    };
+  }
+  if (categoryId === "sales") {
+    return {
+      ...base,
+      hook: "アイスブレイク→ラポール",
+      framework: "SPIN",
+      phases: "状況→課題→影響→解決イメージ→提案",
+    };
+  }
+  if (categoryId === "image") {
+    return { ...base, hook: "3秒ヘッドライン", framework: "AIDA", hierarchy: "ヘッド→サブ→ボディ→CTA" };
+  }
+  return base;
 }
 
 function inferCtaType(categoryId, answers, purpose) {

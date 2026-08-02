@@ -18,6 +18,13 @@ import {
   buildKbScopeBlock,
   buildCreativeAntiPatternsBlock,
 } from "../core/knowledge/wamKnowledgeBase.js";
+import { buildFullKnowledgeBlock } from "../core/knowledge/knowledgeRegistry.js";
+import { formatAppliedHintsForPrompt } from "../core/knowledge/knowledgeApplicator.js";
+import { buildCategoryPlaybookBlock } from "../core/knowledge/categoryPlaybooks.js";
+import { buildCategoryKnowledgeBlock } from "../core/knowledge/categoryKnowledgeRegistry.js";
+import { buildTrendsKnowledgeBlock } from "../core/knowledge/trendsKnowledgeStore.js";
+import { buildRubricQualityBlock } from "../core/quality/rubricLearningRegistry.js";
+import { formatAnalysisIntelligenceSummary } from "../core/analyzers/analysisIntelligence.js";
 import {
   buildCreativeScenePrompt,
   buildCreativeDesignPrinciplesBlock,
@@ -69,6 +76,51 @@ export function buildProductKnowledgeBlock(productKnowledge, answers) {
 
 /** thinkingCore 分析結果ブロック（再エクスポート） */
 export { buildAnalysisReflectionBlock };
+
+const USE_CASE_CATEGORY = {
+  sns_image: "sns",
+  pop_promo: "image",
+  proposal_doc: "proposal",
+  newsletter_line: "newsletter",
+  sales_talk: "sales",
+};
+
+/** Blueprint からカテゴリ ID を解決 */
+export function resolveCategoryFromBlueprint(blueprint) {
+  return blueprint.categoryId || USE_CASE_CATEGORY[blueprint.useCaseId] || "proposal";
+}
+
+/** Knowledge Base 統合ブロック（ドメイン + 学習 + 適用ヒント + カテゴリPlaybook） */
+export function buildKnowledgePromptBlock(blueprint) {
+  const bp = blueprint?.payload ? blueprint.payload : blueprint;
+  const categoryId = resolveCategoryFromBlueprint(bp);
+  const knowledge = bp.knowledgeSnapshot ?? {};
+  const domainBlock = buildFullKnowledgeBlock(categoryId, knowledge);
+  const appliedBlock = formatAppliedHintsForPrompt(bp.appliedKnowledge ?? knowledge.appliedKnowledge);
+  const playbookBlock = buildCategoryPlaybookBlock(categoryId, {
+    challenge: bp.challenge ?? bp.challengeAnalysis,
+    location: bp.displayLocation,
+    seasonal: bp.seasonalContext,
+    appealAxis: bp.appealAxis,
+    salesType: bp.salesType,
+  });
+  const categoryKbBlock = buildCategoryKnowledgeBlock(categoryId, {
+    appealAxis: bp.appealAxis,
+    salesType: bp.salesType,
+    displayLocation: bp.displayLocation,
+    surfaceChallenge: bp.challenge?.surfaceChallenge ?? bp.surfaceChallenge,
+    seasonalLabel: bp.seasonalContext?.label,
+  });
+  const trendsBlock = buildTrendsKnowledgeBlock(categoryId);
+  const intelligence = knowledge.analysisIntelligence;
+  const intelligenceBlock = intelligence
+    ? [formatAnalysisIntelligenceSummary(intelligence), intelligence.rubricBlock].filter(Boolean).join("\n\n")
+    : buildRubricQualityBlock(categoryId);
+
+  return [domainBlock, categoryKbBlock, trendsBlock, intelligenceBlock, appliedBlock, playbookBlock]
+    .filter(Boolean)
+    .join("\n\n");
+}
 
 /** @deprecated buildBackgroundImagePrompt — buildCreativeScenePrompt を使用 */
 export function buildBackgroundImagePrompt(config) {

@@ -23,6 +23,7 @@ import {
   enrichBlueprintForRetry,
   MAX_QUALITY_RETRIES,
 } from "../quality/rubricFramework.js";
+import { enrichBlueprintWithKnowledge } from "../knowledge/knowledgeApplicator.js";
 
 export function runDeliverablePipeline(categoryId, answers, options = {}) {
   const schema = getSchemaForCategory(categoryId);
@@ -43,7 +44,11 @@ export function runDeliverablePipeline(categoryId, answers, options = {}) {
   const sessionId = analysis.sessionId;
   const { build, buildPrompts } = getDeliverableHandler(schema.useCaseId);
 
-  let blueprintPayload = build(ctx);
+  let blueprintPayload = enrichBlueprintWithKnowledge(
+    build(ctx),
+    categoryId,
+    ctx.payload.knowledge
+  );
   let promptBundle = null;
   let qualityGate = null;
   let blueprint = null;

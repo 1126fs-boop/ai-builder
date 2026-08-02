@@ -9,6 +9,7 @@ import {
   generateWizardViaProvider,
   generateMeetingViaProvider,
 } from "./promptProvider.js";
+import { onPromptGenerated } from "../learningBridge.js";
 
 /** @typedef {import("./promptProvider.js").PromptProviderId} PromptProviderId */
 
@@ -22,6 +23,7 @@ export async function generateWizardPrompt(categoryId, answers, callbacks = {}) 
   console.log("[promptPipeline] generateWizardPrompt: start", { categoryId, provider: ACTIVE_PROVIDER });
   const result = await generateWizardViaProvider(categoryId, answers, callbacks);
   const normalized = normalizeResult(result);
+  onPromptGenerated(normalized);
   console.log("[promptPipeline] generateWizardPrompt: done", {
     source: normalized.metrics.source,
     ms: normalized.metrics.totalMs,

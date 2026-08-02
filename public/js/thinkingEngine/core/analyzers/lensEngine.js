@@ -30,7 +30,7 @@ export function runLensEngine(categoryId, input) {
     };
   });
 
-  const synthesis = synthesizeReviews(lensReviews, purpose, challenge);
+  const synthesis = synthesizeReviews(lensReviews, purpose, challenge, knowledge);
 
   return { lensReviews, synthesis };
 }
@@ -57,12 +57,35 @@ function buildRecommendation(roleId, purpose, challenge) {
   return `${challenge.surfaceChallenge}と${purpose.primaryGoal}を一貫させる`;
 }
 
-function synthesizeReviews(lensReviews, purpose, challenge) {
+function synthesizeReviews(lensReviews, purpose, challenge, knowledge) {
   const agreedPoints = [
     "経営課題起点で訴求する（商品スペックから入らない）",
     `Before/After で${challenge.impact}を示す`,
     purpose.constraints?.[0] || "自然な日本語",
   ];
+
+  if (knowledge?.appliedKnowledge?.directives?.length) {
+    agreedPoints.push(
+      ...knowledge.appliedKnowledge.directives.slice(0, 2).map((d) => d.text)
+    );
+  }
+
+  if (knowledge?.analysisIntelligence?.analysisDirectives?.length) {
+    agreedPoints.push(
+      ...knowledge.analysisIntelligence.analysisDirectives
+        .filter((d) => d.priority === "high")
+        .slice(0, 2)
+        .map((d) => d.text)
+    );
+  }
+
+  if (knowledge?.analysisIntelligence?.revisionLessons?.length) {
+    agreedPoints.push(`修正学習: ${knowledge.analysisIntelligence.revisionLessons[0]}`);
+  }
+
+  if (knowledge?.learned?.hints?.length) {
+    agreedPoints.push(`学習: ${knowledge.learned.hints[0]}`);
+  }
 
   const tensions = lensReviews
     .filter((l) => l.counterpoint)

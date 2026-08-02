@@ -3,7 +3,7 @@
  * 静的アセットをキャッシュし、オフライン閲覧をサポート
  */
 
-const CACHE_NAME = "aibuilder-pwa-v20";
+const CACHE_NAME = "aibuilder-pwa-v24";
 
 const PRECACHE = [
   "/",
@@ -11,7 +11,7 @@ const PRECACHE = [
   "/meeting.html",
   "/style.css",
   "/meeting.css",
-  "/manifest.webmanifest",
+  "/data/knowledge-trends.json",
   "/icons/icon.svg",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -27,6 +27,7 @@ const PRECACHE = [
   "/js/state.js",
   "/js/ui.js",
   "/js/storage.js",
+  "/js/learningBridge.js",
   "/js/asyncUtils.js",
   "/js/supabaseClient.js",
   "/js/authBar.js",
@@ -94,6 +95,10 @@ const PRECACHE = [
   "/js/thinkingEngine/core/creative/creativeDesignEngine.js",
   "/js/thinkingEngine/core/knowledge/wamKnowledgeBase.js",
   "/js/thinkingEngine/core/quality/rubricFramework.js",
+  "/js/thinkingEngine/core/quality/categoryRubricProfiles.js",
+  "/js/thinkingEngine/core/quality/rubricLearningStore.js",
+  "/js/thinkingEngine/core/quality/rubricLearningRegistry.js",
+  "/js/thinkingEngine/core/analyzers/analysisIntelligence.js",
   "/js/thinkingEngine/core/quality/promptQuality.js",
   "/js/thinkingEngine/rubrics/snsQuality.js",
   "/js/thinkingEngine/rubrics/popQuality.js",
@@ -108,6 +113,18 @@ const PRECACHE = [
   "/js/thinkingEngine/core/types/deliverable.js",
   "/js/thinkingEngine/core/knowledge/knowledgeTypes.js",
   "/js/thinkingEngine/core/knowledge/knowledgeRegistry.js",
+  "/js/thinkingEngine/blueprints/categoryEnhancers.js",
+  "/js/thinkingEngine/core/knowledge/industryKnowledgeBase.js",
+  "/js/thinkingEngine/core/knowledge/categoryKnowledgeRegistry.js",
+  "/js/thinkingEngine/core/knowledge/trendsKnowledgeStore.js",
+  "/js/thinkingEngine/core/knowledge/categories/snsKnowledge.js",
+  "/js/thinkingEngine/core/knowledge/categories/newsletterKnowledge.js",
+  "/js/thinkingEngine/core/knowledge/categories/proposalKnowledge.js",
+  "/js/thinkingEngine/core/knowledge/categories/salesKnowledge.js",
+  "/js/thinkingEngine/core/knowledge/categories/imageKnowledge.js",
+  "/js/thinkingEngine/core/knowledge/categoryPlaybooks.js",
+  "/js/thinkingEngine/core/knowledge/knowledgeApplicator.js",
+  "/js/thinkingEngine/core/knowledge/learningStorage.js",
   "/js/thinkingEngine/core/knowledge/learningRegistry.js",
   "/js/meeting/meetingApp.js",
   "/js/meeting/roles.js",

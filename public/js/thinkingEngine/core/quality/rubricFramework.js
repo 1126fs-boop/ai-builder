@@ -10,6 +10,9 @@ import { evaluatePopBlueprint } from "../../rubrics/popQuality.js";
 import { evaluateNewsletterBlueprint } from "../../rubrics/newsletterQuality.js";
 import { evaluateSalesBlueprint } from "../../rubrics/salesQuality.js";
 import { evaluateGeneratedPrompt } from "./promptQuality.js";
+import { getCategoryRubricProfile, learnRubricFromQualityGate } from "./rubricLearningRegistry.js";
+
+export { learnRubricFromQualityGate, getCategoryRubricProfile, buildRubricQualityBlock } from "./rubricLearningRegistry.js";
 
 /** 品質合格ライン（0〜1） */
 export const QUALITY_PASS_THRESHOLD = 0.75;
@@ -47,6 +50,8 @@ export function evaluateBlueprintQuality(categoryId, blueprintPayload) {
 export function runQualityGate(categoryId, blueprintPayload, promptBundle) {
   const bpResult = evaluateBlueprintQuality(categoryId, blueprintPayload);
   const gpResult = evaluateGeneratedPrompt(categoryId, promptBundle);
+  const rubricProfile = getCategoryRubricProfile(categoryId);
+  const passThreshold = rubricProfile.passThreshold ?? QUALITY_PASS_THRESHOLD;
 
   const bpWeight = 0.6;
   const gpWeight = 0.4;
@@ -57,17 +62,31 @@ export function runQualityGate(categoryId, blueprintPayload, promptBundle) {
     ...gpResult.checks.filter((c) => !c.pass),
   ];
 
-  const improvements = failedChecks.map((c) => c.hint || c.label);
+  const improvements = [
+    ...failedChecks.map((c) => c.hint || c.label),
+    ...rubricProfile.topFocus.slice(0, 2).map((f) => `[ルーブリック] ${f.label}: ${f.hint}`),
+  ];
 
-  return {
-    passed: score >= QUALITY_PASS_THRESHOLD,
+  const result = {
+    passed: score >= passThreshold,
     score,
     blueprintScore: bpResult.score,
     promptScore: gpResult.score,
     checks: [...bpResult.checks, ...gpResult.checks],
     improvements,
     failedChecks,
+    rubricProfile: {
+      label: rubricProfile.label,
+      passThreshold,
+      topFocus: rubricProfile.topFocus,
+    },
   };
+
+  if (!result.passed) {
+    learnRubricFromQualityGate(categoryId, result);
+  }
+
+  return result;
 }
 
 /**

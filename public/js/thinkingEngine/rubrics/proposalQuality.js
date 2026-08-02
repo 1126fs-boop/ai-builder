@@ -44,12 +44,32 @@ export function evaluateProposalBlueprint(blueprint) {
     {
       id: "kpi",
       label: "KPI・効果指標があるか",
-      pass: Boolean(blueprint.kpi?.trim()),
+      pass: Boolean(blueprint.kpi?.trim() || blueprint.kpiExamples?.length),
+      hint: "ROI・KPI・数字を明示",
+    },
+    {
+      id: "numbers_roi",
+      label: "ROIセクションがあるか",
+      pass: Array.isArray(blueprint.roiSection) && blueprint.roiSection.length >= 2,
+      hint: "ROI・回収期間・売上シミュレーション",
+    },
+    {
+      id: "implementation",
+      label: "導入ストーリーがあるか",
+      pass: Array.isArray(blueprint.implementationPhases) && blueprint.implementationPhases.length >= 2,
+      hint: "90日導入ステップを記述",
+    },
+    {
+      id: "differentiation",
+      label: "競合差別化があるか",
+      pass: Boolean(blueprint.competitiveDiff || blueprint.differentiationPoints?.length),
+      hint: "経営課題解決の切り口で差別化",
     },
     {
       id: "story",
       label: "提案が課題と直結しているか",
       pass: Boolean(blueprint.proposalStory?.trim()),
+      hint: "Before→Bridge→After",
     },
   ];
 

@@ -6,6 +6,7 @@ import { unwrapBlueprint } from "../core/types/blueprint.js";
 import {
   buildSystemPrompt,
   formatSynthesisHints,
+  buildKnowledgePromptBlock,
   DEFAULT_CONSTRAINTS,
 } from "./_shared.js";
 
@@ -26,6 +27,12 @@ export function buildProposalPrompts(blueprint) {
     .map((o) => `Q: ${o.concern}\nA: ${o.response}`)
     .join("\n\n");
   const chaptersBlock = (bp.chapters || []).map((c, i) => `${i + 1}. ${c}`).join("\n");
+  const knowledgeBlock = buildKnowledgePromptBlock(bp);
+
+  const roiBlock = (bp.roiSection || []).map((r) => `- ${r}`).join("\n");
+  const implBlock = (bp.implementationPhases || []).map((p) => `- ${p}`).join("\n");
+  const kpiBlock = (bp.kpiExamples || []).map((k) => `- ${k}`).join("\n");
+  const diffBlock = (bp.differentiationPoints || []).map((d) => `- ${d}`).join("\n");
 
   const systemPrompt = buildSystemPrompt({
     role: "美容業界BtoB（サロン・クリニック向け）の提案書作成プロフェッショナル",
@@ -34,12 +41,16 @@ export function buildProposalPrompts(blueprint) {
       ...DEFAULT_CONSTRAINTS,
       "商品カタログではなく経営改善提案書として書く",
       "冒頭は取引先の課題への共感から入る",
+      "ROI・回収期間・KPIを数字で明示（不明は【】プレースホルダー）",
+      "競合差別化は経営課題解決の切り口で",
     ],
     companyRules: bp.constraintsSummary?.split("\n").filter(Boolean) ?? [],
   });
 
   const textPrompt = `# 依頼
-以下の条件で、取引先に提出できる提案書を作成してください。
+以下の条件で、取引先に提出できる提案書を、美容業界プロが書いたレベルの品質で作成してください。
+
+${knowledgeBlock}
 
 【取引先】${bp.industry}
 【提案種別】${bp.proposalScope}
@@ -49,13 +60,26 @@ export function buildProposalPrompts(blueprint) {
 【業種特性】${bp.industryContext}
 【期待インパクト】${bp.impact}
 
-# 提案ストーリー
+# 提案ストーリー（Before→Bridge→After）
 ${bp.proposalStory}
 
 # Before / After
 ${bp.before}
 
 ${bp.after}
+
+# ROI・数字の書き方（必須）
+${roiBlock}
+
+# KPI例
+${kpiBlock}
+
+# 導入ストーリー（90日〜）
+${implBlock}
+
+# 競合との差別化
+${bp.competitiveDiff || ""}
+${diffBlock}
 
 # 必ず含める構成（${(bp.chapters || []).length}章）
 ${chaptersBlock}
