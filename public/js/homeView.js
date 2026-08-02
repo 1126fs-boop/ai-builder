@@ -26,11 +26,28 @@ export function initHomeView(handlers) {
 }
 
 export async function renderHome() {
-  await loadTemplates();
-  renderTemplates();
-  renderLibrary();
-  renderPopular();
-  renderAllCategories();
+  renderCategoryGrids();
+  try {
+    await loadTemplates();
+    renderTemplates();
+  } catch (err) {
+    console.error("[homeView] templates failed", err);
+  }
+  try {
+    renderLibrary();
+  } catch (err) {
+    console.error("[homeView] library failed", err);
+  }
+}
+
+/** カテゴリグリッドのみ同期描画（メイン導線 — 最優先） */
+export function renderCategoryGrids() {
+  try {
+    renderAllCategories();
+    renderPopular();
+  } catch (err) {
+    console.error("[homeView] category grids failed", err);
+  }
 }
 
 function renderTemplates() {
@@ -41,6 +58,7 @@ function renderTemplates() {
 /* ── AIライブラリ ── */
 
 function renderLibrary() {
+  if (!DOM.libraryList || !DOM.libraryCount) return;
   const query = state.searchQuery;
   const filter = state.libraryFilter;
   const stats = getLibraryStats();
@@ -124,7 +142,9 @@ export function setLibraryFilter(filter) {
 
 function createCategoryCard(category, delay = 0) {
   const card = document.createElement("button");
+  card.type = "button";
   card.className = "category-card";
+  card.dataset.categoryId = category.id;
   card.style.animationDelay = `${delay * 0.05}s`;
   card.innerHTML = `
     <span class="category-card__icon">${category.icon}</span>
@@ -136,6 +156,7 @@ function createCategoryCard(category, delay = 0) {
 }
 
 function renderPopular() {
+  if (!DOM.popularGrid) return;
   DOM.popularGrid.innerHTML = "";
   const query = state.searchQuery;
   const categories = query
@@ -151,6 +172,10 @@ function renderPopular() {
 }
 
 function renderAllCategories() {
+  if (!DOM.allCategoriesGrid) {
+    console.error("[homeView] #all-categories-grid が見つかりません");
+    return;
+  }
   DOM.allCategoriesGrid.innerHTML = "";
   const categories = state.searchQuery ? searchCategories(state.searchQuery) : getAllCategories();
 

@@ -42,7 +42,34 @@
       <section id="section-all-categories" class="home-section home-section--primary">
         <h2 class="home-section__title">カテゴリから作成</h2>
         <p class="home-section__desc">作りたい成果物を選ぶと、質問ウィザードが始まります。</p>
-        <div id="all-categories-grid" class="category-grid"></div>
+        <div id="all-categories-grid" class="category-grid">
+          <!-- JS 読み込み前も使えるフォールバック（メイン5カテゴリ） -->
+          <button type="button" class="category-card" data-category-id="sns">
+            <span class="category-card__icon">📱</span>
+            <span class="category-card__label">SNS投稿画像</span>
+            <span class="category-card__desc">Instagram/LINE向け画像＋キャプション</span>
+          </button>
+          <button type="button" class="category-card" data-category-id="newsletter">
+            <span class="category-card__icon">📧</span>
+            <span class="category-card__label">メルマガ・LINE</span>
+            <span class="category-card__desc">取引先向けメール・LINE配信文</span>
+          </button>
+          <button type="button" class="category-card" data-category-id="proposal">
+            <span class="category-card__icon">📋</span>
+            <span class="category-card__label">提案書作成</span>
+            <span class="category-card__desc">取引先向け提案書・プレゼン資料</span>
+          </button>
+          <button type="button" class="category-card" data-category-id="sales">
+            <span class="category-card__icon">💼</span>
+            <span class="category-card__label">営業トーク</span>
+            <span class="category-card__desc">商談・テレアポ・DMなどの営業台本</span>
+          </button>
+          <button type="button" class="category-card" data-category-id="image">
+            <span class="category-card__icon">🎨</span>
+            <span class="category-card__label">POP・販促物</span>
+            <span class="category-card__desc">店内POP・販促ビジュアル</span>
+          </button>
+        </div>
       </section>
 
       <div class="search-bar">
@@ -218,6 +245,6 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script type="module" src="js/app.js?v=13"></script>
+  <script type="module" src="js/app.js?v=14"></script>
 </body>
 </html>
