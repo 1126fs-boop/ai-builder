@@ -139,38 +139,87 @@ function buildSceneBackgroundSvg(
   `;
 }
 
-/** 訴求軸・ヘッドラインの SVG テキストオーバーレイ */
-function buildHeadlineOverlaySvg(
+/** 訴求軸・ヘッドライン・サブコピーの SVG テキストオーバーレイ */
+function buildCopyOverlaySvg(
   width: number,
   height: number,
   creativeBrief?: CreativeBrief,
-  productName?: string
+  productName?: string,
+  textPrompt?: string
 ) {
   const headline =
     creativeBrief?.challengeHook?.slice(0, 28) ||
     creativeBrief?.appealAxis?.slice(0, 28) ||
     productName?.slice(0, 20) ||
     "";
-  if (!headline) return null;
+  const subcopy =
+    textPrompt?.split("\n").find((l) => l.trim().length > 0)?.slice(0, 36) ||
+    creativeBrief?.appealAxis?.slice(0, 36) ||
+    "";
+  if (!headline && !subcopy) return null;
 
   const placement = (creativeBrief?.productPlacement?.position || "center-right").toLowerCase();
-  const textX = placement.includes("right") ? Math.round(width * 0.06) : Math.round(width * 0.06);
-  const textY = Math.round(height * 0.12);
-  const fontSize = Math.max(28, Math.round(width * 0.045));
-  const subSize = Math.max(16, Math.round(width * 0.022));
-  const sub = creativeBrief?.formatLabel || "WAM Creative";
+  const textX = Math.round(width * 0.06);
+  const textY = Math.round(height * 0.1);
+  const fontSize = Math.max(32, Math.round(width * 0.048));
+  const subSize = Math.max(18, Math.round(width * 0.024));
+  const labelSize = Math.max(14, Math.round(width * 0.018));
+  const formatLabel = creativeBrief?.formatLabel || "WAM Creative";
 
-  const escaped = headline.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const escapedSub = sub.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const headlineLine = headline ? `<text x="${textX}" y="${textY + fontSize + 12}" class="head" font-size="${fontSize}">${esc(headline)}</text>` : "";
+  const subLine = subcopy
+    ? `<text x="${textX}" y="${textY + fontSize + subSize + 28}" class="sub" font-size="${subSize}">${esc(subcopy)}</text>`
+    : "";
 
   return Buffer.from(`
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="textFade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" style="stop-color:#000;stop-opacity:0.45"/>
+          <stop offset="100%" style="stop-color:#000;stop-opacity:0"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="${Math.round(width * 0.65)}" height="${Math.round(height * 0.35)}" fill="url(#textFade)"/>
       <style>
-        .head { font-family: 'Segoe UI', 'Hiragino Sans', sans-serif; font-weight: 700; fill: #ffffff; }
-        .sub { font-family: 'Segoe UI', 'Hiragino Sans', sans-serif; font-weight: 500; fill: rgba(255,255,255,0.85); }
+        .head { font-family: 'Segoe UI', 'Hiragino Sans', 'Yu Gothic', sans-serif; font-weight: 700; fill: #ffffff; }
+        .sub { font-family: 'Segoe UI', 'Hiragino Sans', 'Yu Gothic', sans-serif; font-weight: 500; fill: rgba(255,255,255,0.9); }
+        .label { font-family: 'Segoe UI', 'Hiragino Sans', sans-serif; font-weight: 600; fill: rgba(255,255,255,0.75); letter-spacing: 0.08em; }
       </style>
-      <text x="${textX}" y="${textY}" class="sub" font-size="${subSize}">${escapedSub}</text>
-      <text x="${textX}" y="${textY + fontSize + 8}" class="head" font-size="${fontSize}">${escaped}</text>
+      <text x="${textX}" y="${textY}" class="label" font-size="${labelSize}">${esc(formatLabel)}</text>
+      ${headlineLine}
+      ${subLine}
+    </svg>
+  `);
+}
+
+/** CTA ボタンオーバーレイ */
+function buildCtaOverlaySvg(
+  width: number,
+  height: number,
+  creativeBrief?: CreativeBrief,
+  captionPrompt?: string
+) {
+  const ctaText =
+    captionPrompt?.match(/CTA[：:]\s*(.+)/i)?.[1]?.slice(0, 16) ||
+    captionPrompt?.split("\n").pop()?.slice(0, 16) ||
+    "詳しくはプロフィールへ";
+  const palette = paletteToColors(creativeBrief?.colorPalette || []);
+  const accent = palette[1] || "#c9a227";
+  const btnW = Math.round(width * 0.42);
+  const btnH = Math.round(height * 0.065);
+  const btnX = Math.round(width * 0.06);
+  const btnY = height - btnH - Math.round(height * 0.08);
+  const fontSize = Math.max(16, Math.round(width * 0.022));
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+
+  return Buffer.from(`
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <rect x="${btnX}" y="${btnY}" rx="${Math.round(btnH / 2)}" ry="${Math.round(btnH / 2)}"
+        width="${btnW}" height="${btnH}" fill="${accent}" opacity="0.95"/>
+      <text x="${btnX + btnW / 2}" y="${btnY + btnH / 2 + fontSize / 3}"
+        text-anchor="middle" font-family="'Segoe UI','Hiragino Sans',sans-serif"
+        font-size="${fontSize}" font-weight="700" fill="#ffffff">${esc(ctaText)}</text>
     </svg>
   `);
 }
@@ -236,7 +285,7 @@ function calcProductPosition(
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as GenerateImageBody;
-    const { imagePrompt = "", imageDirective } = body;
+    const { imagePrompt = "", textPrompt = "", captionPrompt = "", imageDirective } = body;
 
     const layoutSpec = imageDirective?.layoutSpec ?? {};
     const creativeBrief = imageDirective?.creativeBrief ?? undefined;
@@ -246,14 +295,20 @@ export async function POST(req: NextRequest) {
       await createSceneBackground(width, height, imagePrompt, layoutSpec, creativeBrief)
     ).resize(width, height, { fit: "cover" });
 
-    const headlineSvg = buildHeadlineOverlaySvg(
+    const copySvg = buildCopyOverlaySvg(
       width,
       height,
       creativeBrief,
-      imageDirective?.productName
+      imageDirective?.productName,
+      textPrompt
     );
-    if (headlineSvg) {
-      composite = composite.composite([{ input: headlineSvg, top: 0, left: 0 }]);
+    if (copySvg) {
+      composite = composite.composite([{ input: copySvg, top: 0, left: 0 }]);
+    }
+
+    const ctaSvg = buildCtaOverlaySvg(width, height, creativeBrief, captionPrompt);
+    if (ctaSvg) {
+      composite = composite.composite([{ input: ctaSvg, top: 0, left: 0 }]);
     }
 
     const officialUrl = imageDirective?.officialImageUrl;
@@ -262,7 +317,7 @@ export async function POST(req: NextRequest) {
       const placement =
         creativeBrief?.productPlacement ||
         layoutSpec.productZone || { position: "center-right", widthRatio: 0.4 };
-      const zoneWidth = Math.round(width * (placement.widthRatio ?? 0.4));
+      const zoneWidth = Math.round(width * (placement.widthRatio ?? 0.48));
       const zoneHeight = Math.round(height * 0.85);
       const padding = Math.round(width * 0.04);
 

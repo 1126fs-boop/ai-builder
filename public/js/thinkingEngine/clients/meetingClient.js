@@ -9,10 +9,15 @@ import {
   ROLE_EXPERTISE,
   ROUND_TYPES,
   MIN_DISCUSSION_ROUNDS,
-  STANCE_LABELS,
 } from "../domainKnowledge.js";
 import { formatDiscussionSections } from "../sectionBuilder.js";
 import { assembleThinkingResult } from "../core/thinkingCore.js";
+import {
+  buildRoleProposal,
+  buildRoleDebate,
+  buildRoleRefinement,
+  pickRoleDebateTarget,
+} from "./meetingRoleDebateEngine.js";
 
 export function pickReferenceMessages(messages, excludeRoleId, count = 2) {
   return messages
@@ -37,56 +42,52 @@ export function summarizeDiscussion(messages, maxLen = 2000) {
 
 function buildRound1Sections(role, topic) {
   const exp = ROLE_EXPERTISE[role.id] || { focus: "専門領域", example: "現場事例", risk: "実行リスク" };
+  const proposal = buildRoleProposal({ ...role, _exp: exp }, topic);
   return [
-    { title: "立場・専門性", body: `${role.name}として、${exp.focus}の観点から「${topic}」を分析します。` },
-    { title: "目的整理", body: `取引先の経営課題（売上・リピート・客単価・集客・人材）が成功の前提。${exp.focus}は直接インパクトします。` },
+    { title: "専門家としての初見", body: proposal.insight },
+    { title: "優先アクション", body: proposal.action },
     { title: "具体例", body: exp.example },
-    { title: "実践方法", body: "①現状把握 → ②仮説 → ③2週間PoC → ④効果測定 → ⑤拡大" },
-    { title: "制約・注意点", body: exp.risk },
-    { title: "優先順位", body: "優先度「高」— 90日以内にKPI改善が見込める領域から" },
+    { title: "制約・盲点", body: proposal.risk },
+    { title: "測定指標", body: `${exp.focus}に直結するKPIを週次で追う（90日以内に改善が見える数字）` },
   ];
 }
 
-function buildRound2Sections(role, topic, refs, stance) {
-  const exp = ROLE_EXPERTISE[role.id] || { focus: "専門領域" };
-  const refNames = refs.map((m) => m.roleName).join("・") || "他参加者";
-  const refSummary = refs.map((m) => `・${m.roleName}: ${m.content.split("\n")[0]?.slice(0, 50)}…`).join("\n");
-  const stanceBody = {
-    agree: `${refNames}に賛成。${exp.focus}のKPIを週次で測定すべき。`,
-    counter: `${refNames}に懸念。${exp.focus}ではPoC後に拡大すべき。`,
-    supplement: `${refNames}を補足。取引先フェーズで優先度が変わる。`,
-  };
+function buildRound2Sections(role, topic, refs) {
+  const debate = buildRoleDebate(role, topic, refs);
+  const refSummary = refs.map((m) => `・${m.roleName}: ${m.content.split("\n")[0]?.slice(0, 80)}…`).join("\n");
+  const stanceLabel = debate.stance === "counter" ? "【反論】" : "【補足】";
   return [
-    { title: `${STANCE_LABELS[stance]} 他AI分析`, body: `${refSummary}\n\n${stanceBody[stance]}` },
-    { title: "改善案", body: `「${topic}」を${exp.focus}軸で具体化。` },
-    { title: "不足情報", body: "反論を恐れずリスクと未確定事項を可視化する。" },
+    { title: `${stanceLabel} 他AIへの応答`, body: `${refSummary}\n\n${debate.insight}` },
+    { title: "改善アクション", body: debate.action },
+    { title: "未確定・要検証", body: "反論を恐れず、データ不足の論点を明示する。" },
   ];
 }
 
-function buildRound3Sections(role, topic) {
-  const exp = ROLE_EXPERTISE[role.id] || { focus: "専門領域" };
+function buildRound3Sections(role, topic, round1Insight) {
+  const refinement = buildRoleRefinement(role, topic, round1Insight);
   return [
-    { title: "統合見解", body: `3ラウンドの議論を踏まえ「${topic}」の最終提案。` },
-    { title: "出力形式", body: "Quick Win(2週間) → 90日KPI → 180日仕組み化の3段階で整理" },
-    { title: "実践方法", body: `Week1-2: ヒアリング3社 / Week3-4: PoC / Week5-8: 横展開（${exp.focus}）` },
-    { title: "期待成果", body: "売上・リピート・客単価で+10〜20%改善" },
+    { title: "統合前の最終改善案", body: refinement.insight },
+    { title: "実行プラン", body: refinement.action },
+    { title: "期待成果", body: "2週間Quick Win → 90日KPI → 180日仕組み化の3段階" },
   ];
 }
 
 /** 1発言分の議論思考 */
 export function runRound({ role, topic, round, previousMessages }) {
   let sections;
+  const round1Msg = previousMessages.find((m) => m.roleId === role.id && m.round === 1);
+  const round1Insight = round1Msg?.content?.split("\n")[0] || "";
+
   if (round === 1) {
     sections = buildRound1Sections(role, topic);
   } else if (round === 2) {
     sections = buildRound2Sections(
       role,
       topic,
-      pickReferenceMessages(previousMessages, role.id, 3),
-      pickStance(role.id, round)
+      pickRoleDebateTarget(role.id, previousMessages.filter((m) => m.round === 1))
     );
   } else {
-    sections = buildRound3Sections(role, topic);
+    sections = buildRound3Sections(role, topic, round1Insight);
   }
 
   const content = formatDiscussionSections(sections);
