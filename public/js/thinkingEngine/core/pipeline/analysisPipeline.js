@@ -69,9 +69,19 @@ export function runAnalysisPipeline(categoryId, answers, options = {}) {
     enrichmentSources: enrichment.enrichmentSources,
     enrichmentConfidence: enrichment.enrichmentConfidence,
   });
-  phases.push({ id: "gap", label: "不足情報判定", ok: gap.canProceedToBlueprint });
 
-  if (!gap.canProceedToBlueprint) {
+  const wizardQualityCompleted =
+    options.wizardQualityCompleted === true ||
+    answers.__wizardQualityCompleted === true;
+
+  // ウィザード内で品質補完済みなら、生成パイプラインでは再ブロックしない
+  const gapPhaseOk =
+    gap.canProceedToBlueprint ||
+    (wizardQualityCompleted && gap.canGenerate);
+
+  phases.push({ id: "gap", label: "不足情報判定", ok: gapPhaseOk });
+
+  if (!gapPhaseOk) {
     return {
       context: null,
       gap,

@@ -10,7 +10,7 @@ import { WAM_BRAND_TONE } from "../knowledge/wamKnowledgeBase.js";
 import { APPEAL_TO_CHALLENGE } from "../knowledge/knowledgeRegistry.js";
 import { getTrendsForCategorySync } from "../knowledge/trendsKnowledgeStore.js";
 import { getLearnedInsightsForAnalysis } from "../knowledge/learningRegistry.js";
-import { inferFieldsFromCorpus } from "./freeInputParser.js";
+import { inferFieldsFromCorpus, parseFreeInputDirectives } from "./freeInputParser.js";
 
 /** @typedef {{ field: string, value: string, source: string, confidence: number, reason: string }} EnrichmentSource */
 
@@ -43,6 +43,12 @@ export function enrichAnswersFromKnowledge(categoryId, answers, schema) {
   }
 
   applyCategoryEnrichment(categoryId, base, corpus, sources);
+
+  // 自由記述の構造化（AnalysisContext へ渡す）
+  const userDirectives = parseFreeInputDirectives(base.free_input);
+  if (userDirectives.hasContent) {
+    base._userDirectives = userDirectives;
+  }
 
   // 自由記述 + 回答全体から不足フィールドを推定
   const enrichedCorpus = [base.free_input, corpus].filter(Boolean).join(" ");

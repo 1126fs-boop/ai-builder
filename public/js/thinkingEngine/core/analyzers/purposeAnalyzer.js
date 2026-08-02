@@ -1,6 +1,4 @@
-/**
- * フェーズ1 — 目的分析
- */
+import { parseFreeInputDirectives } from "./freeInputParser.js";
 
 /** カテゴリ別の成功基準テンプレート */
 const SUCCESS_CRITERIA = {
@@ -86,14 +84,40 @@ export function analyzePurpose(categoryId, answers, schema) {
   return applyUserFreeInput(result, answers);
 }
 
-/** 自由記述を Purpose に反映 */
+/** 自由記述を Purpose に反映（ユーザー指定 + AI推定の両立） */
 function applyUserFreeInput(purpose, answers) {
   const free = answers.free_input?.trim();
-  if (!free) return purpose;
+  const directives = answers._userDirectives ?? (free ? parseFreeInputDirectives(free) : null);
+  if (!free && !directives?.hasContent) return purpose;
+
+  const extraConstraints = [];
+  if (directives?.mustIncludeKeywords?.length) {
+    extraConstraints.push(`必須キーワード: ${directives.mustIncludeKeywords.join("、")}`);
+  }
+  if (directives?.ngWords?.length) {
+    extraConstraints.push(`NGワード（使用禁止）: ${directives.ngWords.join("、")}`);
+  }
+  if (directives?.campaignName) {
+    extraConstraints.push(`キャンペーン名: ${directives.campaignName}`);
+  }
+  if (directives?.designDirection) {
+    extraConstraints.push(`デザイン方向性: ${directives.designDirection}`);
+  }
+  if (directives?.referenceImage) {
+    extraConstraints.push(`参考イメージ: ${directives.referenceImage}`);
+  }
+  if (directives?.companyExpression) {
+    extraConstraints.push(`会社独自の表現: ${directives.companyExpression}`);
+  }
+  if (free) {
+    extraConstraints.push(`ユーザー自由記述: ${free.slice(0, 400)}`);
+  }
+
   return {
     ...purpose,
-    userNotes: free,
-    constraints: [...(purpose.constraints || CONSTRAINTS), `ユーザー自由記述: ${free.slice(0, 400)}`],
+    userNotes: free || "",
+    userDirectives: directives?.hasContent ? directives : null,
+    constraints: [...(purpose.constraints || CONSTRAINTS), ...extraConstraints],
   };
 }
 

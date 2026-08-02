@@ -116,6 +116,8 @@ const PRECACHE = [
   "/js/thinkingEngine/core/analyzers/purposeAnalyzer.js",
   "/js/thinkingEngine/core/analyzers/challengeAnalyzer.js",
   "/js/thinkingEngine/core/analyzers/gapAnalyzer.js",
+  "/js/thinkingEngine/core/analyzers/inputEnricher.js",
+  "/js/thinkingEngine/core/quality/qualitySupplementEngine.js",
   "/js/thinkingEngine/core/types/persistable.js",
   "/js/thinkingEngine/core/types/analysisContext.js",
   "/js/thinkingEngine/core/types/blueprint.js",

@@ -122,7 +122,7 @@ export function buildDeliverable(categoryId, answers) {
   });
 }
 
-export { hasSchemaFlow, runGapAnalysis, getSeedQuestions } from "./schemas/index.js";
+export { hasSchemaFlow, runGapAnalysis, getSeedQuestions, getWizardInitialQuestions } from "./schemas/index.js";
 
 export { runAnalysisPipeline, runWizardAnalysis } from "./core/pipeline/analysisPipeline.js";
 export { runDeliverablePipeline } from "./core/pipeline/deliverablePipeline.js";
