@@ -34,6 +34,9 @@ function goHome() {
 }
 
 async function init() {
+  // カテゴリクリックは最優先（モジュール読込成功直後に登録）
+  document.addEventListener("click", handleCategoryClick);
+
   initLearning();
 
   initHomeView({
@@ -54,50 +57,54 @@ async function init() {
     onCancel: goHome,
   });
 
-  // カテゴリ一覧を最優先で描画（ストレージ待ちより先）
   renderCategoryGrids();
-
-  // フォールバック HTML カードにも対応（イベント委譲）
-  DOM.viewHome?.addEventListener("click", (e) => {
-    const card = e.target.closest("[data-category-id]");
-    if (card?.dataset.categoryId) {
-      startCategory(card.dataset.categoryId);
-    }
-  });
 
   try {
     await Promise.all([initStorage(), initProducts()]);
     await initAuthBar();
-
     await renderHome();
   } catch (err) {
     console.error("[app] init failed", err);
     renderCategoryGrids();
   }
 
+  bindUiEvents();
+  registerServiceWorker();
+
+  window.__AIB_INIT__ = true;
+}
+
+/** カテゴリカードクリック（HTMLフォールバック + JS描画カード共通） */
+function handleCategoryClick(e) {
+  const card = e.target.closest("[data-category-id]");
+  if (!card?.dataset.categoryId) return;
+  if (!DOM.viewHome?.contains(card)) return;
+  e.preventDefault();
+  startCategory(card.dataset.categoryId);
+}
+
+function bindUiEvents() {
   if (tryOpenMeetingPromptView()) {
     /* AI会議からの引き継ぎ */
   }
 
-  DOM.searchInput?.addEventListener("input", (e) => handleSearchInput(e.target.value));
+  DOM.searchInput?.addEventListener("input", (ev) => handleSearchInput(ev.target.value));
 
-  DOM.filterChips.forEach((chip) => {
+  DOM.filterChips?.forEach((chip) => {
     chip.addEventListener("click", () => setLibraryFilter(chip.dataset.filter));
   });
 
-  DOM.btnNext.addEventListener("click", goNext);
-  DOM.btnPrev.addEventListener("click", goPrev);
-  DOM.btnTopHome.addEventListener("click", goHomeFromQuestions);
+  DOM.btnNext?.addEventListener("click", goNext);
+  DOM.btnPrev?.addEventListener("click", goPrev);
+  DOM.btnTopHome?.addEventListener("click", goHomeFromQuestions);
 
-  DOM.btnCopy.addEventListener("click", copyPrompt);
+  DOM.btnCopy?.addEventListener("click", copyPrompt);
   DOM.btnChatgptHandoff?.addEventListener("click", handoffToChatgpt);
   DOM.btnGenerateImage?.addEventListener("click", generateResultImage);
   DOM.btnDownloadImage?.addEventListener("click", downloadResultImage);
-  DOM.btnFavorite.addEventListener("click", handleFavoriteToggle);
-  DOM.btnRestart.addEventListener("click", restartCategory);
-  DOM.btnHome.addEventListener("click", goHomeFromResult);
-
-  registerServiceWorker();
+  DOM.btnFavorite?.addEventListener("click", handleFavoriteToggle);
+  DOM.btnRestart?.addEventListener("click", restartCategory);
+  DOM.btnHome?.addEventListener("click", goHomeFromResult);
 }
 
 document.addEventListener("DOMContentLoaded", init);

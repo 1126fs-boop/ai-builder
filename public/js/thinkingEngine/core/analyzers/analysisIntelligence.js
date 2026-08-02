@@ -6,7 +6,7 @@
 
 import { buildTrendsKnowledgeBlock } from "../knowledge/trendsKnowledgeStore.js";
 import { buildCategoryKnowledgeBlock } from "../knowledge/categoryKnowledgeRegistry.js";
-import { getCategoryRubricProfile, buildRubricQualityBlock } from "./rubricLearningRegistry.js";
+import { getCategoryRubricProfile, buildRubricQualityBlock } from "../quality/rubricLearningRegistry.js";
 
 /**
  * @param {string} categoryId
