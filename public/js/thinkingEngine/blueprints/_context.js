@@ -17,6 +17,7 @@ export function resolveBlueprintInputs(ctx) {
     challenge: challenge ?? {},
     knowledge: knowledge ?? {},
     structure: structure ?? {},
+    creativeBrief: structure?.creativeBrief ?? null,
     lensReviews: lensReviews ?? [],
     synthesis: synthesis ?? {},
     meta: meta ?? {},

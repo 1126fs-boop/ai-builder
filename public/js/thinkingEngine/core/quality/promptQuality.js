@@ -34,22 +34,33 @@ export function evaluateGeneratedPrompt(categoryId, promptBundle) {
     checks.push(
       {
         id: "image_prompt",
-        label: "背景用 imagePrompt がある",
+        label: "オリジナルシーン用 imagePrompt がある",
         pass: Boolean(promptBundle.imagePrompt?.trim()),
-        hint: "背景のみ生成する英語プロンプトを追加",
+        hint: "HP再現禁止のオリジナルシーン生成プロンプトを追加",
       },
       {
         id: "negative",
         label: "negativePrompt がある",
         pass: Boolean(promptBundle.negativePrompt?.trim()),
-        hint: "商品創作禁止の negativePrompt を追加",
+        hint: "商品創作・HP再現禁止の negativePrompt を追加",
+      },
+      {
+        id: "no_hp_mimic",
+        label: "HP再現禁止の指示",
+        pass:
+          (promptBundle.textPrompt || "").includes("HP") ||
+          (promptBundle.textPrompt || "").includes("公式HP") ||
+          (promptBundle.systemPrompt || "").includes("再現禁止") ||
+          (promptBundle.imagePrompt || "").includes("NOT a website"),
+        hint: "公式HPデザイン再現禁止を明記",
       },
       {
         id: "no_product_gen",
         label: "商品AI生成禁止の指示",
         pass:
           (promptBundle.textPrompt || "").includes("AI生成禁止") ||
-          (promptBundle.systemPrompt || "").includes("AI生成禁止"),
+          (promptBundle.systemPrompt || "").includes("AI生成禁止") ||
+          (promptBundle.textPrompt || "").includes("公式画像"),
         hint: "商品画像は公式画像配置のみと明記",
       }
     );

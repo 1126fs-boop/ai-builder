@@ -30,9 +30,9 @@ export function evaluatePopBlueprint(blueprint) {
     },
     {
       id: "layout",
-      label: "レイアウト仕様",
-      pass: Boolean(blueprint.layoutSpec),
-      hint: "商品・テキストゾーンを定義",
+      label: "オリジナルクリエイブ方向",
+      pass: Boolean(blueprint.creativeBrief || (blueprint.creativeDirections?.length >= 3)),
+      hint: "HP再現禁止のオリジナルクリエイティブ方向を追加",
     },
     {
       id: "lens",

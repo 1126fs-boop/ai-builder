@@ -48,9 +48,9 @@ export function evaluateSnsBlueprint(blueprint) {
     },
     {
       id: "layout",
-      label: "レイアウト仕様がある",
-      pass: Boolean(blueprint.layoutSpec),
-      hint: "商品配置ゾーンを定義",
+      label: "オリジナルクリエイティブ方向がある",
+      pass: Boolean(blueprint.creativeBrief || blueprint.layoutSpec?.compositionStyle),
+      hint: "毎回異なるオリジナルクリエイティブ方向を定義",
     },
   ];
 

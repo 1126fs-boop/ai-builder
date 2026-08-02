@@ -119,7 +119,8 @@ export function buildKnowledgeSnapshot(categoryId, answers, challenge) {
 
   const antiPatterns = [...BASE_RULES];
   if (categoryId === "sns" || categoryId === "image") {
-    antiPatterns.push(...WAM_IMAGE_GENERATION_RULES.slice(0, 3));
+    antiPatterns.push(...WAM_IMAGE_GENERATION_RULES.slice(0, 4));
+    antiPatterns.push("公式HPのレイアウト・配色・タイポグラフィをデザインテンプレートとして使わない");
   }
 
   const refs = runtimeItems.map((item) => item.id);

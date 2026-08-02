@@ -1,11 +1,47 @@
 /**
  * WAM 公式 Knowledge Base
  *
- * 商品情報・ブランドルール・コピー表現を Prompt Builder へ一貫反映する。
- * 商品画像は AI 創作せず公式画像を利用する設計。
+ * 公式HPから取得するのは「商品情報・商品画像・ブランドルール」のみ。
+ * レイアウト・配色・タイポグラフィ等のデザインは HP から取らず、毎回 AI が新規設計する。
  */
 
 import { WAM_OFFICIAL_SITE, WAM_PRODUCT_INDEX, resolveProductFromAnswers } from "../../../../wamProducts.js";
+
+/** 公式HPから取得してよい情報（Knowledge Base のみ） */
+export const WAM_KB_FROM_HP = [
+  "商品名・カテゴリ・公式説明文",
+  "公式商品画像URL",
+  "ブランドルール・コピー表現ガイド",
+];
+
+/** 公式HPから取得してはいけない情報（デザインテンプレート禁止） */
+export const WAM_KB_NEVER_FROM_HP = [
+  "公式HPのページレイアウト",
+  "公式サイトの配色・タイポグラフィ",
+  "商品ページの構図・余白設計",
+  "HPスクリーンショット風デザイン",
+];
+
+/** AI が毎回ゼロから設計する要素 */
+export const WAM_AI_DESIGNS_FRESH = [
+  "背景",
+  "人物",
+  "レイアウト",
+  "配色",
+  "装飾",
+  "タイポグラフィ",
+  "全体構図",
+  "コピー配置",
+];
+
+/** クリエイティブ設計の禁止事項 */
+export const WAM_CREATIVE_ANTI_PATTERNS = [
+  "公式HPのレイアウト・配色・タイポグラフィを再現しない",
+  "公式サイトや商品ページのデザインをテンプレートとして使わない",
+  "HPスクリーンショット風・Webページ風の見た目にしない",
+  "毎回同じ構図・同じ配色のテンプレートを使い回さない",
+  "商品画像以外を公式HPの見た目に合わせない",
+];
 
 /** 株式会社ワム — ブランドルール（全 Prompt Builder 共通） */
 export const WAM_BRAND_RULES = [
@@ -82,6 +118,30 @@ export function buildCopyPatterns(appealAxis, vars = {}) {
 }
 
 /**
+ * Knowledge Base スコープブロック（プロンプト用）
+ */
+export function buildKbScopeBlock() {
+  return [
+    "【Knowledge Base スコープ — 公式HP】",
+    "取得してよい情報:",
+    ...WAM_KB_FROM_HP.map((r) => `- ${r}`),
+    "",
+    "取得禁止（デザインテンプレートとして使わない）:",
+    ...WAM_KB_NEVER_FROM_HP.map((r) => `- ${r}`),
+    "",
+    "AIが毎回ゼロから設計:",
+    ...WAM_AI_DESIGNS_FRESH.map((r) => `- ${r}`),
+  ].join("\n");
+}
+
+/**
+ * クリエイティブ禁止パターンブロック
+ */
+export function buildCreativeAntiPatternsBlock() {
+  return ["【クリエイティブ禁止事項】", ...WAM_CREATIVE_ANTI_PATTERNS.map((r) => `- ${r}`)].join("\n");
+}
+
+/**
  * ブランドルールブロック（プロンプト用）
  */
 export function buildBrandRulesBlock() {
@@ -97,17 +157,17 @@ export function buildWamProductKnowledgeBlock(productKnowledge, answers = {}) {
   const product = productKnowledge || resolveProductFromAnswers(answers);
 
   const lines = [
-    "【WAM 公式 Knowledge Base】",
-    `- 公式サイト: ${WAM_OFFICIAL_SITE}`,
-    `- 製品一覧: ${WAM_PRODUCT_INDEX}`,
+    "【WAM Knowledge Base — 公式HP参照範囲】",
+    `- 参照元: ${WAM_PRODUCT_INDEX}（商品情報・画像・ブランドルールのみ）`,
+    "- 公式HPのデザイン・レイアウトは参照しない",
   ];
 
   if (!product) {
     lines.push(
       "",
       "【商品指定なし】",
-      "- 背景・文字・レイアウトのみ生成",
-      "- 商品ビジュアル創作禁止"
+      "- 背景・人物・装飾・レイアウト・配色・タイポはAIが毎回新規設計",
+      "- 公式HPの見た目を再現しない"
     );
     return lines.join("\n");
   }
@@ -129,8 +189,9 @@ export function buildWamProductKnowledgeBlock(productKnowledge, answers = {}) {
       "",
       "【商品画像 — 公式画像をそのまま使用】",
       `- 公式商品画像URL: ${product.officialImageUrl}`,
-      "- 商品画像はAI生成禁止。配置のみ。",
-      "- AI生成対象: 背景・人物・装飾・文字・レイアウトのみ"
+      "- 商品画像はAI生成禁止。公式画像を後から配置のみ。",
+      "- 背景・人物・装飾・レイアウト・配色・タイポはAIが毎回ゼロから設計",
+      "- 公式HPのページデザイン・配色・タイポグラフィは再現禁止"
     );
   } else {
     lines.push(
@@ -179,10 +240,23 @@ export function buildAnalysisReflectionBlock(bp) {
         bp.lensReviews.map((l) => `- ${l.focus}: ${l.insight}`).join("\n")
     );
   }
-  if (bp.layoutSpec) {
+  if (bp.creativeBrief) {
+    const cb = bp.creativeBrief;
+    parts.push(
+      `【クリエイティブ方向 — 今回オリジナル設計】`,
+      `- 用途: ${cb.formatLabel}`,
+      `- 構図: ${cb.compositionStyle}`,
+      `- シーン: ${cb.sceneConcept}`,
+      `- 配色: ${cb.colorPalette?.join(" / ") || "—"}`,
+      `- タイポ: ${cb.typographyStyle}`,
+      `- 商品配置: ${cb.productPlacement?.position || "—"}（公式画像のみ）`
+    );
+  } else if (bp.layoutSpec?.compositionStyle) {
     const ls = bp.layoutSpec;
     parts.push(
-      `【レイアウト】商品=${ls.productZone?.position || "right"} / テキスト=${ls.textZone?.position || "left"} / 比率=${ls.productZone?.widthRatio || 0.45}`
+      `【クリエイティブ方向】${ls.compositionStyle}`,
+      `- 配色: ${ls.colorPalette?.join(" / ") || "—"}`,
+      `- 商品配置: ${ls.productZone?.position || "—"}`
     );
   }
 

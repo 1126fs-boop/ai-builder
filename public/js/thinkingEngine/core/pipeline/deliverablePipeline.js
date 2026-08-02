@@ -78,6 +78,9 @@ export function runDeliverablePipeline(categoryId, answers, options = {}) {
           productName: blueprintPayload.productAsset.name,
           productDescription: blueprintPayload.productAsset.description,
           layoutSpec: blueprintPayload.layoutSpec ?? null,
+          creativeBrief: blueprintPayload.creativeBrief ?? null,
+          designMode: "original_creative",
+          doNotMimicOfficialWebsite: true,
         }
       : null);
 

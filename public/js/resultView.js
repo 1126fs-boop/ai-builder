@@ -239,8 +239,8 @@ function renderImageSection(item) {
 
   if (DOM.imagePlaceholder && !currentImageBlobUrl) {
     DOM.imagePlaceholder.hidden = false;
-    DOM.imagePlaceholder.textContent =
-      "「画像を生成」ボタンで、背景＋公式商品画像の合成画像を作成できます";
+      DOM.imagePlaceholder.textContent =
+      "「画像を生成」で、毎回異なるオリジナル背景＋公式商品画像の合成画像を作成できます";
   }
 }
 
@@ -344,7 +344,7 @@ export async function generateResultImage() {
       DOM.imagePlaceholder.hidden = true;
     }
 
-    showToast("画像を生成しました（公式商品画像を配置済み）");
+    showToast("画像を生成しました（オリジナルデザイン + 公式商品画像）");
     if (DOM.btnDownloadImage) {
       DOM.btnDownloadImage.hidden = false;
     }

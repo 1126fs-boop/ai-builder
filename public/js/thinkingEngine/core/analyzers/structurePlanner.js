@@ -2,7 +2,13 @@
  * フェーズ6 — 最適構成決定
  *
  * Blueprint / Prompt Builder が参照する構成・ narrative・CTA 型を決定する。
+ * 画像系: 固定レイアウトではなく creativeBrief（毎回異なるオリジナルデザイン）を生成。
  */
+
+import {
+  generateCreativeBrief,
+  creativeBriefToLayoutSpec,
+} from "../creative/creativeDesignEngine.js";
 
 /** カテゴリ別デフォルト構成 */
 const DEFAULT_SECTIONS = {
@@ -19,9 +25,9 @@ const DEFAULT_SECTIONS = {
     "次のアクション",
   ],
   sns: [
-    "ビジュアルコンセプト",
+    "オリジナルビジュアルコンセプト",
     "キャッチコピー3案",
-    "背景生成プロンプト",
+    "クリエイティブシーン生成プロンプト",
     "投稿キャプション",
     "ハッシュタグ",
     "CTA",
@@ -38,8 +44,8 @@ const DEFAULT_SECTIONS = {
   image: [
     "ヘッドライン",
     "サブコピー",
-    "レイアウト指示",
-    "背景生成プロンプト",
+    "オリジナルクリエイティブ指示",
+    "シーン生成プロンプト",
     "印刷・掲示注意点",
   ],
 };
@@ -49,7 +55,7 @@ const NARRATIVE_BY_CATEGORY = {
   sns: "1行目フック→課題共感→商品価値→CTA",
   newsletter: "挨拶→共感→価値→具体→CTA",
   sales: "共感→ヒアリング→課題整理→提案→反論処理→クロージング",
-  image: "ヘッドライン→訴求→レイアウト→背景（商品は公式画像）",
+  image: "ヘッドライン→訴求→オリジナルクリエイティブ→シーン（商品は公式画像）",
 };
 
 /**
@@ -80,13 +86,20 @@ export function planStructure(categoryId, input) {
   }
 
   const copyStrategy = buildCopyStrategy(categoryId, purpose, challenge);
-  const layoutSpec = buildLayoutSpec(categoryId, answers, knowledge);
+  const creativeBrief =
+    categoryId === "sns" || categoryId === "image"
+      ? generateCreativeBrief(categoryId, answers, challenge, purpose)
+      : null;
+  const layoutSpec = creativeBrief
+    ? creativeBriefToLayoutSpec(creativeBrief, knowledge?.productKnowledge)
+    : null;
 
   return {
     sections,
     narrativeArc: NARRATIVE_BY_CATEGORY[categoryId] || NARRATIVE_BY_CATEGORY.proposal,
     copyStrategy,
     layoutSpec,
+    creativeBrief,
     ctaType: inferCtaType(categoryId, answers, purpose),
     tone: purpose.tone,
     outputFormat: answers.output_format || inferOutputFormat(categoryId, answers),
@@ -99,24 +112,8 @@ function buildCopyStrategy(categoryId, purpose, challenge) {
     hook: categoryId === "sns" ? "課題共感（3秒）" : "経営課題への共感",
     body: `${challenge.surfaceChallenge}→${challenge.impact}`,
     cta: "1つに絞る",
-    avoid: ["商品スペックから入る", "AIっぽい表現"],
+    avoid: ["商品スペックから入る", "AIっぽい表現", "公式HPデザインの再現"],
     successCriteria: purpose.successCriteria ?? [],
-  };
-}
-
-function buildLayoutSpec(categoryId, answers, knowledge) {
-  if (categoryId !== "sns" && categoryId !== "image") return null;
-
-  const aspect = answers.aspect || answers.size_format || "1:1（1080×1080）";
-  const product = knowledge?.productKnowledge;
-
-  return {
-    aspect,
-    productZone: { position: "right", widthRatio: 0.45 },
-    textZone: { position: "left", widthRatio: 0.5 },
-    backgroundOnly: true,
-    productImageMode: product?.imageMode ?? "none",
-    officialImageUrl: product?.officialImageUrl ?? null,
   };
 }
 
@@ -137,10 +134,10 @@ function inferCtaType(categoryId, answers, purpose) {
 function inferOutputFormat(categoryId, answers) {
   const map = {
     proposal: "提案書全文",
-    sns: "画像プロンプト+キャプション",
+    sns: "オリジナルクリエイティブ+キャプション",
     newsletter: "件名3+本文",
     sales: "営業台本",
-    image: "POP文案+レイアウト+背景プロンプト",
+    image: "POP文案+オリジナルクリエイティブ+シーンプロンプト",
   };
   return map[categoryId] || "テキスト";
 }

@@ -13,14 +13,15 @@ import { resolveBlueprintInputs } from "./_context.js";
  * @param {Object} ctx AnalysisContext エンベロープ
  */
 export function buildSnsImageBlueprint(ctx) {
-  const { answers, purpose, challenge, knowledge, structure, lensReviews, synthesis } = resolveBlueprintInputs(ctx);
+  const { answers, purpose, challenge, knowledge, structure, creativeBrief, lensReviews, synthesis } = resolveBlueprintInputs(ctx);
 
   const product = answers.wam_product || knowledge.productKnowledge?.name || "【商品名】";
   const fmt = answers.sns_format || "Instagram投稿";
   const appeal = answers.appeal_axis || "導入メリット";
   const target = answers.target_audience || purpose.audience || "サロンオーナー";
-  const aspect = answers.aspect || "1:1（1080×1080）";
+  const aspect = answers.aspect || creativeBrief?.aspect || "1:1（1080×1080）";
   const impact = challenge.impact;
+  const brief = creativeBrief ?? structure?.creativeBrief ?? null;
 
   const blueprint = {
     useCaseId: "sns_image",
@@ -28,6 +29,7 @@ export function buildSnsImageBlueprint(ctx) {
     challenge,
     synthesis,
     layoutSpec: structure.layoutSpec,
+    creativeBrief: brief,
     knowledgeRefs: knowledge.refs ?? [],
     productAsset: knowledge.productKnowledge,
     snsFormat: fmt,
@@ -37,7 +39,9 @@ export function buildSnsImageBlueprint(ctx) {
     aspect,
     impact,
     catchDirection: answers.catch_direction || "",
-    visualConcept: `${product}を主役に、${appeal}を${target}が「自分ごと化」できる構図。${challenge.surfaceChallenge}（${impact}）と結びつけたビジュアル。`,
+    visualConcept: brief
+      ? `【オリジナル販促クリエイティブ】${brief.sceneConcept}。${appeal}を${target}向けに訴求。公式HPのデザインは再現せず、${brief.compositionStyle}で毎回新しい${brief.formatLabel}を設計。`
+      : `${product}を主役に、${appeal}を${target}が「自分ごと化」できるオリジナル構図。${challenge.surfaceChallenge}（${impact}）と結びつけた新規ビジュアル。`,
     copyPatterns: buildCopyPatterns(appeal, {
       product,
       target,
@@ -48,8 +52,10 @@ export function buildSnsImageBlueprint(ctx) {
     hashtags: "#美容サロン #サロン経営 #BtoB美容 #ワム #経営改善",
     constraintsSummary: [
       ...(knowledge.antiPatterns?.slice(0, 2) ?? []),
+      "公式HPのデザイン・レイアウトは再現しない",
+      "背景・配色・タイポは毎回オリジナル設計",
+      "商品画像のみ公式画像を配置",
       "経営課題と結びつけた訴求",
-      "商品写真のみの構成禁止（コピー必須）",
     ].map((c) => `- ${c}`).join("\n"),
     outputFormat: answers.output_format || "画像生成プロンプト（英語）+キャプション",
     improvementPoints: purpose.successCriteria ?? [],
@@ -70,7 +76,10 @@ export function buildSnsImageBlueprint(ctx) {
       {
         id: "designer",
         focus: "販促デザイナー",
-        insight: (c) => `${c.product}を左1/3、キャッチを右。${c.aspect}で視認性優先。`,
+        insight: (c) =>
+          brief
+            ? `公式HPを再現せず、${brief.compositionStyle}で${c.aspect}のオリジナル${brief.formatLabel}を設計。配色: ${brief.colorPalette.join("/")}。`
+            : `${c.product}を活かしたオリジナル構図。${c.aspect}で視認性優先。`,
       },
       {
         id: "sns",

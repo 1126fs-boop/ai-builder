@@ -2,6 +2,7 @@
  * Prompt Builder — 共通ユーティリティ
  *
  * AI非依存。Knowledge → プロンプト束への変換。
+ * 公式HPは Knowledge Base のみ。デザインは毎回 AI が新規設計。
  */
 
 import {
@@ -9,12 +10,17 @@ import {
   DEFAULT_THINKING_PROCESS,
   BASE_RULES,
 } from "../domainKnowledge.js";
-import { WAM_OFFICIAL_SITE, WAM_PRODUCT_INDEX } from "../../../wamProducts.js";
 import {
   buildBrandRulesBlock,
   buildWamProductKnowledgeBlock,
   buildAnalysisReflectionBlock,
+  buildKbScopeBlock,
+  buildCreativeAntiPatternsBlock,
 } from "../core/knowledge/wamKnowledgeBase.js";
+import {
+  buildCreativeScenePrompt,
+  buildCreativeDesignPrinciplesBlock,
+} from "../core/creative/creativeDesignEngine.js";
 
 /** 標準 systemPrompt の骨格 */
 export function buildSystemPrompt(config) {
@@ -25,6 +31,7 @@ export function buildSystemPrompt(config) {
     companyRules = [],
     antiPatterns = [],
     evaluationCriteria = DEFAULT_EVALUATION_CRITERIA,
+    includeCreativeRules = false,
   } = config;
 
   const lines = [
@@ -33,12 +40,19 @@ export function buildSystemPrompt(config) {
     `# 思考プロセス\n${DEFAULT_THINKING_PROCESS}`,
     `# 評価基準\n${evaluationCriteria}`,
     buildBrandRulesBlock(),
+  ];
+
+  if (includeCreativeRules) {
+    lines.push(buildKbScopeBlock(), buildCreativeAntiPatternsBlock());
+  }
+
+  lines.push(
     `# 制約`,
     ...constraints.map((c) => `- ${c}`),
     ...companyRules.map((c) => `- ${c}`),
     ...antiPatterns.slice(0, 4).map((c) => `- ${c}`),
-    `- 自然な日本語。AIっぽい表現禁止`,
-  ];
+    `- 自然な日本語。AIっぽい表現禁止`
+  );
 
   return lines.join("\n\n");
 }
@@ -51,21 +65,20 @@ export function buildProductKnowledgeBlock(productKnowledge, answers) {
 /** thinkingCore 分析結果ブロック（再エクスポート） */
 export { buildAnalysisReflectionBlock };
 
-/** 画像系 — 背景のみ生成する英語プロンプト */
+/** @deprecated buildBackgroundImagePrompt — buildCreativeScenePrompt を使用 */
 export function buildBackgroundImagePrompt(config) {
-  const {
-    style = "luxury beauty salon, professional, clean",
-    aspect = "1:1",
-    mood = "trustworthy, high-end",
-    emptyZone = "empty space on the right side for product overlay",
-  } = config;
-
-  return [
-    `Professional beauty B2B promotional background, ${style}, ${mood},`,
-    `aspect ratio ${aspect}, ${emptyZone},`,
-    "soft lighting, elegant interior, NO products, NO devices, NO machines,",
-    "NO cosmetic bottles, NO packaging, NO logos, NO text",
-  ].join(" ");
+  return buildCreativeScenePrompt({
+    formatLabel: config.formatLabel || "promotional creative",
+    sceneConcept: config.style || "professional beauty promotional scene",
+    mood: config.mood || "trustworthy",
+    colorPalette: config.colorPalette || ["neutral tones"],
+    compositionStyle: config.compositionStyle || "original asymmetric layout",
+    typographyStyle: config.typographyStyle || "modern hierarchy",
+    aspect: config.aspect || "1:1",
+    targetAudience: config.targetAudience || "salon owner",
+    appealAxis: config.appealAxis || "benefits",
+    productPlacement: { position: config.productZone || "compositional space" },
+  });
 }
 
 /** 画像系 — negativePrompt 標準 */
@@ -73,13 +86,17 @@ export function buildStandardNegativePrompt() {
   return [
     "product, device, machine, cosmetic bottle, packaging, logo,",
     "beauty equipment, salon machine, fake product, generated product,",
+    "website screenshot, homepage layout, web page design, browser UI,",
+    "official website reproduction, template reuse, identical layout,",
     "text artifacts, watermark, low quality, blurry",
   ].join(" ");
 }
 
 /** imageDirective オブジェクト */
-export function buildImageDirective(productKnowledge, structure, answers) {
+export function buildImageDirective(productKnowledge, structure, answers, creativeBrief) {
   const layout = structure?.layoutSpec;
+  const brief = creativeBrief ?? structure?.creativeBrief ?? null;
+
   return {
     mode: productKnowledge?.imageMode ?? "background_only",
     officialImageUrl: productKnowledge?.officialImageUrl ?? null,
@@ -87,6 +104,9 @@ export function buildImageDirective(productKnowledge, structure, answers) {
     productDescription: productKnowledge?.description ?? null,
     officialUrl: productKnowledge?.officialUrl ?? null,
     layoutSpec: layout ?? null,
+    creativeBrief: brief,
+    designMode: "original_creative",
+    doNotMimicOfficialWebsite: true,
     uploadGuidance:
       productKnowledge?.imageMode === "upload_required"
         ? "公式商品画像または正規パッケージ写真をアップロードしてください"
@@ -104,6 +124,8 @@ export function formatSynthesisHints(synthesis) {
   }
   return parts.join("\n\n");
 }
+
+export { buildCreativeScenePrompt, buildCreativeDesignPrinciplesBlock };
 
 /** デフォルト営業制約 */
 export const DEFAULT_CONSTRAINTS = [...BASE_RULES];

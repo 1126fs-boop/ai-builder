@@ -3,7 +3,7 @@
  * 静的アセットをキャッシュし、オフライン閲覧をサポート
  */
 
-const CACHE_NAME = "aibuilder-pwa-v18";
+const CACHE_NAME = "aibuilder-pwa-v19";
 
 const PRECACHE = [
   "/",
@@ -90,6 +90,7 @@ const PRECACHE = [
   "/js/thinkingEngine/adapters/chatgptAdapter.js",
   "/js/thinkingEngine/adapters/openaiImagesAdapter.js",
   "/js/thinkingEngine/adapters/types.js",
+  "/js/thinkingEngine/core/creative/creativeDesignEngine.js",
   "/js/thinkingEngine/core/knowledge/wamKnowledgeBase.js",
   "/js/thinkingEngine/core/quality/rubricFramework.js",
   "/js/thinkingEngine/core/quality/promptQuality.js",
