@@ -4,7 +4,7 @@
 
 import { resetAll } from "./state.js";
 import { DOM, showView } from "./ui.js";
-import { initHomeView, renderHome, handleSearchInput, setLibraryFilter } from "./homeView.js";
+import { initHomeView, renderHome, renderCategoryGrids, handleSearchInput, setLibraryFilter } from "./homeView.js";
 import { initQuestionView, startCategory, goNext, goPrev, goHomeFromQuestions } from "./questionView.js";
 import {
   initResultView,
@@ -35,8 +35,6 @@ function goHome() {
 
 async function init() {
   initLearning();
-  await Promise.all([initStorage(), initProducts()]);
-  await initAuthBar();
 
   initHomeView({
     onStartCategory: startCategory,
@@ -56,7 +54,26 @@ async function init() {
     onCancel: goHome,
   });
 
-  await renderHome();
+  // カテゴリ一覧を最優先で描画（ストレージ待ちより先）
+  renderCategoryGrids();
+
+  // フォールバック HTML カードにも対応（イベント委譲）
+  DOM.viewHome?.addEventListener("click", (e) => {
+    const card = e.target.closest("[data-category-id]");
+    if (card?.dataset.categoryId) {
+      startCategory(card.dataset.categoryId);
+    }
+  });
+
+  try {
+    await Promise.all([initStorage(), initProducts()]);
+    await initAuthBar();
+
+    await renderHome();
+  } catch (err) {
+    console.error("[app] init failed", err);
+    renderCategoryGrids();
+  }
 
   if (tryOpenMeetingPromptView()) {
     /* AI会議からの引き継ぎ */
