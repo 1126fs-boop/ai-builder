@@ -95,9 +95,14 @@ async function runGeneration() {
   state.savedPromptId = null;
   revokeImageBlob();
 
-  const mergedAnswers = { ...state.inferredAnswers, ...state.answers };
+  const mergedAnswers = {
+    ...state.inferredAnswers,
+    ...state.answers,
+    ...(state.wizardQualityPassed ? { __wizardQualityCompleted: true } : {}),
+  };
   const genResult = await generateWizardPrompt(state.categoryId, mergedAnswers, {
     onStep: (step) => showGeneratingStep(step),
+    wizardQualityCompleted: state.wizardQualityPassed,
   });
   console.log(`${LOG} runGeneration: template done`, {
     source: genResult.metrics?.source,

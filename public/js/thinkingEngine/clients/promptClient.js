@@ -29,7 +29,9 @@ export function runProposalGap({ answers }) {
 
 /** 成果物 Blueprint + 完成プロンプト — 全 Blueprint カテゴリ対応 */
 export function runDeliverable({ categoryId, answers }) {
-  return runDeliverablePipeline(categoryId, answers);
+  return runDeliverablePipeline(categoryId, answers, {
+    wizardQualityCompleted: answers.__wizardQualityCompleted === true,
+  });
 }
 
 /** 後方互換 */

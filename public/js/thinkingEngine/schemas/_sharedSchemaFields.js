@@ -2,42 +2,48 @@
  * 全カテゴリ共通 — 品質基準・補足入力
  *
  * 方針: 質問数ではなく品質。入力は最小、不足時だけ深掘り。
+ * 自由記述は seed の直後（Quality Gate の前）に必ず1回提示する。
  */
 
-/** 品質不足時のみ出す補足入力（seed には含めない） */
+/** ウィザード固定 — 自由記述（任意）ステップ */
 export const FREE_INPUT_QUESTION = {
   id: "free_input",
-  text: "品質向上のため — 補足があれば教えてください",
+  text: "自由記述（任意）— 伝えたいことがあれば入力してください",
   type: "text",
   placeholder:
-    "例: 絶対に入れたい文言 / デザインのイメージ / 商談で聞いたこと など（空欄のまま次へ進めます）",
+    "例: 必ず入れたいキーワード / 会社独自の表現 / キャンペーン名 / NGワード / 参考イメージ / デザインの方向性 など",
   optional: true,
-  hint: "AIが品質を上げるために必要な情報があれば入力してください。なくても構いません。",
+  hint: "入力内容は品質判定とプロンプト生成に反映されます。空欄のまま「品質を確認」へ進んでも構いません。",
   qualityImpact: "high",
+  _stepType: "free_input",
 };
 
 /** デフォルト品質合格ライン */
 export const DEFAULT_MINIMUM_QUALITY_SCORE = 0.65;
 
 /** 安全弁: 無限ループ防止（通常は品質達成で先に終了） */
-export const ABSOLUTE_MAX_GAP_ROUNDS = 10;
+export const ABSOLUTE_MAX_GAP_ROUNDS = 12;
 
-/** 1ラウンドあたりの追問上限（品質不足時のみ緩和） */
-export const DEFAULT_MAX_DYNAMIC_PER_ROUND = 3;
-export const EXPANDED_MAX_DYNAMIC_PER_ROUND = 6;
+/** 品質補完 — 1ラウンドあたり追加する質問数（不足項目だけ1問ずつ） */
+export const SUPPLEMENT_QUESTIONS_PER_ROUND = 1;
 
 /**
  * 品質スコア計算に自由記述ボーナスを加算
  * @param {number} baseScore
  * @param {Object} answers
+ * @param {import("../core/analyzers/freeInputParser.js").FreeInputDirectives|null} [directives]
  */
-export function applyFreeInputQualityBonus(baseScore, answers) {
+export function applyFreeInputQualityBonus(baseScore, answers, directives = null) {
   const free = answers.free_input?.trim();
   if (!free) return baseScore;
   let bonus = 0.06;
   if (free.length >= 30) bonus += 0.06;
   if (free.length >= 80) bonus += 0.06;
   if (/【必須】|絶対|必ず|入れたい/.test(free)) bonus += 0.04;
+  if (directives?.mustIncludeKeywords?.length) bonus += 0.04;
+  if (directives?.designDirection) bonus += 0.03;
+  if (directives?.ngWords?.length) bonus += 0.02;
+  if (directives?.campaignName) bonus += 0.02;
   return Math.min(1, Math.round((baseScore + bonus) * 100) / 100);
 }
 
@@ -45,10 +51,12 @@ export function applyFreeInputQualityBonus(baseScore, answers) {
  * 品質必須フィールドの充足率（0〜1）
  * @param {Object} merged
  * @param {string[]} requiredFields
+ * @param {(fieldId: string) => boolean} [isFilled]
  */
-export function computeRequiredFieldCoverage(merged, requiredFields = []) {
+export function computeRequiredFieldCoverage(merged, requiredFields = [], isFilled = null) {
   if (!requiredFields.length) return 1;
-  const filled = requiredFields.filter((f) => Boolean(merged[f]?.trim())).length;
+  const check = isFilled ?? ((f) => Boolean(merged[f]?.trim()));
+  const filled = requiredFields.filter((f) => check(f)).length;
   return Math.round((filled / requiredFields.length) * 100) / 100;
 }
 

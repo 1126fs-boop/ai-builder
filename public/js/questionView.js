@@ -4,7 +4,8 @@
 
 import { getCategory } from "../categories.js";
 import { getQuestions } from "../questions.js";
-import { hasSchemaFlow, getSeedQuestions, runGapAnalysis } from "./thinkingEngine/schemas/index.js";
+import { hasSchemaFlow, getWizardInitialQuestions } from "./thinkingEngine/schemas/index.js";
+import { runQualitySupplement } from "./thinkingEngine/core/quality/qualitySupplementEngine.js";
 import { ABSOLUTE_MAX_GAP_ROUNDS } from "./thinkingEngine/schemas/_sharedSchemaFields.js";
 import { state, resetFlow } from "./state.js";
 import { DOM, showView } from "./ui.js";
@@ -42,7 +43,7 @@ const QUESTION_HINTS = {
   appeal_point: "訴求軸でヘッドラインとビジュアルが決まります",
   display_location: "掲示場所で文字サイズとレイアウトが変わります",
   size_format: "サイズ指定があるとデザイン指示が具体化します",
-  free_input: "質問では拾えない情報（必須要素・イメージ・補足）を書くと品質が上がります",
+  free_input: "必ず入れたいキーワード、NGワード、キャンペーン名、参考イメージ、デザイン方向性など。AIの自動補完と併用できます",
 };
 
 export function initQuestionView(handlers) {
@@ -73,12 +74,14 @@ export function startCategory(categoryId) {
     state.categoryId = categoryId;
 
     if (hasSchemaFlow(categoryId)) {
-      state.questionFlow = [...getSeedQuestions(categoryId)];
+      state.questionFlow = [...getWizardInitialQuestions(categoryId)];
       state.gapAnalysisDone = false;
       state.gapAnalysisRound = 0;
-      state.askedFollowUpIds = [];
+      state.askedFollowUpIds = ["free_input"];
       state.inferredAnswers = {};
       state.lastGapQuality = null;
+      state.wizardQualityPassed = false;
+      state.supplementMode = false;
     }
 
     if (!DOM.wizardCategory) {
@@ -105,10 +108,19 @@ function getActiveQuestions() {
 }
 
 function renderProgress(current, total) {
-  const isQualityCheck = state.gapAnalysisRound > 0;
-  DOM.progressLabel.textContent = isQualityCheck
-    ? `品質確認 ${current} / ${total}`
-    : `質問 ${current} / ${total}`;
+  const questions = getActiveQuestions();
+  const currentQuestion = questions[state.questionIndex];
+  const isFreeInputStep =
+    currentQuestion?.id === "free_input" && !currentQuestion?._supplementType && !state.supplementMode;
+  const isQualityCheck = state.gapAnalysisRound > 0 || state.supplementMode;
+
+  if (isFreeInputStep) {
+    DOM.progressLabel.textContent = "自由記述（任意）";
+  } else if (isQualityCheck) {
+    DOM.progressLabel.textContent = `品質補完 ${current} / ${total}`;
+  } else {
+    DOM.progressLabel.textContent = `質問 ${current} / ${total}`;
+  }
 
   DOM.progressSegments.innerHTML = "";
   for (let i = 0; i < total; i++) {
@@ -134,11 +146,16 @@ export function renderQuestion() {
   void DOM.questionCard.offsetWidth;
   DOM.questionCard.classList.add("question-card--enter");
 
-  DOM.questionNumber.textContent = `STEP ${index + 1}`;
+  DOM.questionNumber.textContent = question._supplementType
+    ? "品質補完"
+    : question.id === "free_input"
+      ? "自由記述（任意）"
+      : `STEP ${index + 1}`;
   DOM.questionText.textContent = question.text;
+  const qualityLabel = state.lastGapQuality?.label || "";
   const reasonHint = question._reason ? `💡 ${question._reason}` : "";
   const baseHint = QUESTION_HINTS[question.id] || question.hint || "";
-  DOM.questionHint.textContent = [reasonHint, baseHint].filter(Boolean).join(" ");
+  DOM.questionHint.textContent = [qualityLabel, reasonHint, baseHint].filter(Boolean).join("\n");
   DOM.questionHint.hidden = !DOM.questionHint.textContent;
 
   DOM.optionsContainer.innerHTML = "";
@@ -262,10 +279,13 @@ function updateNavButtons(question) {
 
   const total = getActiveQuestions().length;
   const isLast = state.questionIndex >= total - 1;
-  const isFollowUp = question._reason != null;
-  if (isLast && isFollowUp) {
-    DOM.btnNextLabel.textContent = question.optional ? "スキップして生成" : "回答して生成";
-  } else if (isLast && hasSchemaFlow(state.categoryId)) {
+  const isSupplement = question._supplementType != null;
+  const isFreeInputStep = question.id === "free_input" && !isSupplement;
+  if (isLast && isFreeInputStep && hasSchemaFlow(state.categoryId) && !state.gapAnalysisDone) {
+    DOM.btnNextLabel.textContent = "品質を確認";
+  } else if (isLast && isSupplement) {
+    DOM.btnNextLabel.textContent = question.optional ? "回答またはスキップ" : "回答して再確認";
+  } else if (isLast && hasSchemaFlow(state.categoryId) && !state.gapAnalysisDone) {
     DOM.btnNextLabel.textContent = "品質を確認";
   } else if (isLast) {
     DOM.btnNextLabel.textContent = "プロンプトを生成";
@@ -274,65 +294,97 @@ function updateNavButtons(question) {
   }
 }
 
-/** ギャップ分析を実行し、追問があれば questionFlow に追加 */
-function runGapAndMaybeExtendFlow() {
-  const gap = runGapAnalysis(state.categoryId, state.answers, {
+/** 品質補完ループ — 不足項目だけ追加し、OK になるまでウィザード内で繰り返す */
+function runQualitySupplementStep() {
+  const result = runQualitySupplement(state.categoryId, state.answers, {
     askedQuestionIds: state.askedFollowUpIds,
   });
-  state.inferredAnswers = gap.inferredAnswers ?? {};
-  state.lastGapQuality = {
-    score: gap.qualityScore,
-    minimum: gap.minimumQualityScore,
-    sufficient: gap.qualitySufficient,
-    missing: gap.missingQualityFields ?? [],
-  };
 
-  for (const [key, val] of Object.entries(state.inferredAnswers)) {
+  for (const [key, val] of Object.entries(result.mergedAnswers ?? {})) {
     if (val && !state.answers[key]?.trim()) {
       state.answers[key] = val;
     }
   }
+  state.inferredAnswers = result.gap?.inferredAnswers ?? state.inferredAnswers;
 
-  if (gap.followUpQuestions.length > 0) {
-    gap.followUpQuestions.forEach((q) => state.askedFollowUpIds.push(q.id));
-    const current = getActiveQuestions();
-    state.questionFlow = [...current, ...gap.followUpQuestions];
-    state.gapAnalysisRound += 1;
-    return true;
+  state.lastGapQuality = {
+    score: result.gap?.qualityScore,
+    minimum: result.gap?.minimumQualityScore,
+    sufficient: result.gap?.qualitySufficient,
+    missing: result.gap?.missingQualityFields ?? [],
+    label: result.qualityLabel ?? "",
+  };
+
+  if (result.readyToGenerate) {
+    state.wizardQualityPassed = true;
+    state.gapAnalysisDone = true;
+    state.supplementMode = false;
+    return "generate";
   }
 
-  // 追問なし = 品質OK または これ以上聞く項目なし
-  state.gapAnalysisDone = true;
-  return false;
+  if (result.supplementQuestions?.length > 0) {
+    result.supplementQuestions.forEach((q) => {
+      if (!state.askedFollowUpIds.includes(q.id)) {
+        state.askedFollowUpIds.push(q.id);
+      }
+    });
+    const current = getActiveQuestions();
+    state.questionFlow = [...current, ...result.supplementQuestions];
+    state.gapAnalysisRound += 1;
+    state.supplementMode = true;
+    return "ask";
+  }
+
+  // 補完質問が出せないが品質未達 — ウィザード内で追加入力を促す（生成はしない）
+  return "blocked";
 }
 
 export async function goNext() {
   const questions = getActiveQuestions();
   const isLast = state.questionIndex >= questions.length - 1;
 
-  // 品質ベースのギャップ分析（十分なら追問ゼロ / 不足時だけ追加 / 安全弁あり）
+  // 品質補完ループ: 最後の質問のたびに再採点 → 不足なら1問追加 / OK なら生成
   if (
     isLast &&
     hasSchemaFlow(state.categoryId) &&
     !state.gapAnalysisDone &&
     state.gapAnalysisRound < ABSOLUTE_MAX_GAP_ROUNDS
   ) {
-    const extended = runGapAndMaybeExtendFlow();
-    if (extended) {
+    const step = runQualitySupplementStep();
+    if (step === "ask") {
       state.questionIndex++;
       state.customDraft = null;
       renderQuestion();
       return;
     }
+    if (step === "generate") {
+      await onComplete();
+      return;
+    }
+    if (step === "blocked") {
+      showView("questions");
+      const missing = state.lastGapQuality?.missing?.slice(0, 3).join("、") || "";
+      DOM.questionHint.textContent = missing
+        ? `品質基準に届いていません（不足: ${missing}）。回答を追加するか、前の質問に戻って不足項目を埋めてください。`
+        : "品質基準に届いていません。回答を追加するか、前の質問に戻って不足項目を埋めてください。";
+      return;
+    }
   }
 
   if (isLast) {
+    if (hasSchemaFlow(state.categoryId) && !state.gapAnalysisDone) {
+      showView("questions");
+      DOM.questionHint.textContent =
+        "品質確認が完了していません。回答を追加するか、前の質問に戻って不足項目を埋めてください。";
+      return;
+    }
     await onComplete();
-  } else {
-    state.questionIndex++;
-    state.customDraft = null;
-    renderQuestion();
+    return;
   }
+
+  state.questionIndex++;
+  state.customDraft = null;
+  renderQuestion();
 }
 
 export function goPrev() {

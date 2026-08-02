@@ -17,6 +17,8 @@ export const state = {
   askedFollowUpIds: [],
   inferredAnswers: {},
   lastGapQuality: null,
+  wizardQualityPassed: false,
+  supplementMode: false,
 };
 
 export function resetFlow() {
@@ -30,6 +32,8 @@ export function resetFlow() {
   state.askedFollowUpIds = [];
   state.inferredAnswers = {};
   state.lastGapQuality = null;
+  state.wizardQualityPassed = false;
+  state.supplementMode = false;
 }
 
 export function resetAll() {

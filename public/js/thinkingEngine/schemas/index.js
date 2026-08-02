@@ -7,6 +7,7 @@ import { SNS_IMAGE_SCHEMA } from "./snsImage.js";
 import { NEWSLETTER_LINE_SCHEMA } from "./newsletterLine.js";
 import { SALES_TALK_SCHEMA } from "./salesTalk.js";
 import { POP_PROMO_SCHEMA } from "./popPromo.js";
+import { FREE_INPUT_QUESTION } from "./_sharedSchemaFields.js";
 import { runWizardAnalysis } from "../core/pipeline/analysisPipeline.js";
 import { emptyGapAnalysis } from "../core/analyzers/gapAnalyzer.js";
 
@@ -46,10 +47,20 @@ export function runGapAnalysis(categoryId, answers, options = {}) {
   return gap;
 }
 
-/** seed 質問のみ（自由記述は品質不足時に gap が追加） */
+/** seed 質問のみ（後方互換） */
 export function getSeedQuestions(categoryId) {
   const schema = getSchemaForCategory(categoryId);
   return schema?.seedQuestions ?? [];
+}
+
+/**
+ * ウィザード初期質問 — seed + 自由記述（任意）
+ * 流れ: 最低限の質問 → 自由記述 → Quality Gate → 不足項目だけ追加
+ */
+export function getWizardInitialQuestions(categoryId) {
+  const schema = getSchemaForCategory(categoryId);
+  if (!schema) return [];
+  return [...schema.seedQuestions, { ...FREE_INPUT_QUESTION }];
 }
 
 /** Blueprint 対応カテゴリ一覧 */
