@@ -1,8 +1,11 @@
 /**
- * 画像生成 — オリジナル背景 + 公式商品画像合成（プレビュー用）
+ * 画像生成 — オリジナル背景 + 公式商品画像合成
  *
- * OpenAI Images API は使用しない。背景はクリエイティブブリーフに基づく合成背景。
- * 本番の画像生成はユーザーの ChatGPT アカウントで実行。
+ * GeneratedPrompt.imageDirective を Single Source of Truth として使用。
+ * プレビューと ChatGPT Handoff / 将来 GPT Image API が同一構図を再現できるよう設計。
+ *
+ * 現状: 背景は imagePrompt + creativeBrief から決定論的 SVG（API キー不要）
+ * 将来: imagePrompt で GPT Image API 背景生成 → 同一 composite パイプライン
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -11,35 +14,50 @@ import sharp from "sharp";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-/** レイアウト仕様 */
 interface LayoutSpec {
   aspect?: string;
   productZone?: { position?: string; widthRatio?: number; anchor?: string };
   colorPalette?: string[];
   compositionStyle?: string;
-  doNotMimicOfficialWebsite?: boolean;
 }
 
-/** クリエイティブブリーフ */
 interface CreativeBrief {
   aspect?: string;
   colorPalette?: string[];
   productPlacement?: { position?: string; widthRatio?: number; anchor?: string };
+  compositionStyle?: string;
+  typographyStyle?: string;
+  appealAxis?: string;
+  challengeHook?: string;
+  variationSeed?: number;
+  formatLabel?: string;
 }
 
-/** 画像生成リクエスト */
 interface GenerateImageBody {
   imagePrompt?: string;
   negativePrompt?: string;
+  textPrompt?: string;
+  captionPrompt?: string;
   imageDirective?: {
     officialImageUrl?: string;
     layoutSpec?: LayoutSpec;
     creativeBrief?: CreativeBrief;
+    layoutInstructions?: string;
+    productName?: string;
     doNotMimicOfficialWebsite?: boolean;
   };
 }
 
-/** アスペクト比文字列 → ピクセルサイズ */
+/** 文字列 → 決定論的 seed */
+function hashSeed(input: string) {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h);
+}
+
 function parseDimensions(layoutSpec?: LayoutSpec, creativeBrief?: CreativeBrief) {
   const aspect = creativeBrief?.aspect || layoutSpec?.aspect || "1:1（1080×1080）";
   if (aspect.includes("9:16") || aspect.includes("1080×1920")) {
@@ -51,7 +69,6 @@ function parseDimensions(layoutSpec?: LayoutSpec, creativeBrief?: CreativeBrief)
   return { width: 1080, height: 1080 };
 }
 
-/** 配色名 → おおよその HEX（フォールバック背景用） */
 function paletteToColors(palette: string[] = []) {
   const map: Record<string, string> = {
     "deep navy": "#1e3a5f",
@@ -80,33 +97,95 @@ function paletteToColors(palette: string[] = []) {
   return colors.length >= 2 ? colors : ["#2c3e50", "#ecf0f1", "#bdc3c7"];
 }
 
-/** フォールバック背景（OpenAI 未設定時 — クリエイティブブリーフの配色を使用） */
-async function createCreativeFallbackBackground(
+/** imagePrompt + brief から決定論的背景 SVG（プレビュー = レイアウト再現） */
+function buildSceneBackgroundSvg(
   width: number,
   height: number,
+  imagePrompt: string,
   layoutSpec?: LayoutSpec,
   creativeBrief?: CreativeBrief
 ) {
   const palette = creativeBrief?.colorPalette || layoutSpec?.colorPalette || [];
   const [c1, c2, c3] = paletteToColors(palette);
-  const angle = (width + height) % 360;
+  const seed = creativeBrief?.variationSeed ?? hashSeed(imagePrompt || "default");
+  const angle = seed % 360;
+  const cx = (seed % 70) + 15;
+  const cy = ((seed >> 4) % 60) + 20;
+  const r = Math.round(Math.min(width, height) * (0.25 + (seed % 20) / 100));
 
-  const svg = `
+  // 構図に応じた装飾（商品ゾーンとは反対側）
+  const placement = (creativeBrief?.productPlacement?.position || "center-right").toLowerCase();
+  const accentX = placement.includes("right") ? width * 0.12 : width * 0.78;
+  const accentY = height * 0.18;
+
+  return `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%" gradientTransform="rotate(${angle})">
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%" gradientTransform="rotate(${angle})">
           <stop offset="0%" style="stop-color:${c1}"/>
           <stop offset="55%" style="stop-color:${c2}"/>
           <stop offset="100%" style="stop-color:${c3}"/>
         </linearGradient>
+        <radialGradient id="glow" cx="${cx}%" cy="${cy}%">
+          <stop offset="0%" style="stop-color:${c3};stop-opacity:0.35"/>
+          <stop offset="100%" style="stop-color:${c3};stop-opacity:0"/>
+        </radialGradient>
       </defs>
-      <rect width="100%" height="100%" fill="url(#g)"/>
+      <rect width="100%" height="100%" fill="url(#bg)"/>
+      <rect width="100%" height="100%" fill="url(#glow)"/>
+      <circle cx="${accentX}" cy="${accentY}" r="${r}" fill="${c2}" opacity="0.12"/>
+      <circle cx="${width - accentX}" cy="${height - accentY}" r="${Math.round(r * 0.6)}" fill="${c1}" opacity="0.08"/>
     </svg>
   `;
+}
+
+/** 訴求軸・ヘッドラインの SVG テキストオーバーレイ */
+function buildHeadlineOverlaySvg(
+  width: number,
+  height: number,
+  creativeBrief?: CreativeBrief,
+  productName?: string
+) {
+  const headline =
+    creativeBrief?.challengeHook?.slice(0, 28) ||
+    creativeBrief?.appealAxis?.slice(0, 28) ||
+    productName?.slice(0, 20) ||
+    "";
+  if (!headline) return null;
+
+  const placement = (creativeBrief?.productPlacement?.position || "center-right").toLowerCase();
+  const textX = placement.includes("right") ? Math.round(width * 0.06) : Math.round(width * 0.06);
+  const textY = Math.round(height * 0.12);
+  const fontSize = Math.max(28, Math.round(width * 0.045));
+  const subSize = Math.max(16, Math.round(width * 0.022));
+  const sub = creativeBrief?.formatLabel || "WAM Creative";
+
+  const escaped = headline.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const escapedSub = sub.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+
+  return Buffer.from(`
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <style>
+        .head { font-family: 'Segoe UI', 'Hiragino Sans', sans-serif; font-weight: 700; fill: #ffffff; }
+        .sub { font-family: 'Segoe UI', 'Hiragino Sans', sans-serif; font-weight: 500; fill: rgba(255,255,255,0.85); }
+      </style>
+      <text x="${textX}" y="${textY}" class="sub" font-size="${subSize}">${escapedSub}</text>
+      <text x="${textX}" y="${textY + fontSize + 8}" class="head" font-size="${fontSize}">${escaped}</text>
+    </svg>
+  `);
+}
+
+async function createSceneBackground(
+  width: number,
+  height: number,
+  imagePrompt: string,
+  layoutSpec?: LayoutSpec,
+  creativeBrief?: CreativeBrief
+) {
+  const svg = buildSceneBackgroundSvg(width, height, imagePrompt, layoutSpec, creativeBrief);
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
-/** 公式商品画像を取得 */
 async function fetchOfficialProduct(url: string) {
   const res = await fetch(url, {
     headers: { "User-Agent": "AI-Builder/2.0 (WAM Official Product Composite)" },
@@ -116,7 +195,6 @@ async function fetchOfficialProduct(url: string) {
   return Buffer.from(await res.arrayBuffer());
 }
 
-/** 商品配置座標を計算（固定右配置を避ける） */
 function calcProductPosition(
   position: string,
   width: number,
@@ -137,10 +215,10 @@ function calcProductPosition(
     return { left: padding, top: height - ph - padding };
   }
   if (pos.includes("top-left") || pos.includes("top left")) {
-    return { left: padding, top: padding };
+    return { left: padding, top: padding + Math.round(height * 0.08) };
   }
   if (pos.includes("top-right") || pos.includes("top right")) {
-    return { left: width - pw - padding, top: padding };
+    return { left: width - pw - padding, top: padding + Math.round(height * 0.08) };
   }
   if (pos.includes("center-left") || pos.includes("center left")) {
     return { left: padding, top: Math.round((height - ph) / 2) };
@@ -152,23 +230,31 @@ function calcProductPosition(
     return { left: Math.round((width - pw) / 2), top: Math.round((height - ph) / 2) };
   }
 
-  // デフォルト: 右中央（後方互換）
   return { left: width - pw - padding, top: Math.round((height - ph) / 2) };
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as GenerateImageBody;
-    const { imageDirective } = body;
+    const { imagePrompt = "", imageDirective } = body;
 
     const layoutSpec = imageDirective?.layoutSpec ?? {};
     const creativeBrief = imageDirective?.creativeBrief ?? undefined;
     const { width, height } = parseDimensions(layoutSpec, creativeBrief);
 
-    // OpenAI Images API は使用せず、クリエイティブブリーフに基づく背景を生成
-    const background = await createCreativeFallbackBackground(width, height, layoutSpec, creativeBrief);
+    let composite = sharp(
+      await createSceneBackground(width, height, imagePrompt, layoutSpec, creativeBrief)
+    ).resize(width, height, { fit: "cover" });
 
-    let composite = sharp(background).resize(width, height, { fit: "cover" });
+    const headlineSvg = buildHeadlineOverlaySvg(
+      width,
+      height,
+      creativeBrief,
+      imageDirective?.productName
+    );
+    if (headlineSvg) {
+      composite = composite.composite([{ input: headlineSvg, top: 0, left: 0 }]);
+    }
 
     const officialUrl = imageDirective?.officialImageUrl;
     if (officialUrl) {
@@ -211,14 +297,17 @@ export async function POST(req: NextRequest) {
     }
 
     const output = await composite.png().toBuffer();
+    const seed = creativeBrief?.variationSeed ?? hashSeed(imagePrompt);
 
     return new NextResponse(output, {
       status: 200,
       headers: {
         "Content-Type": "image/png",
         "Cache-Control": "private, max-age=3600",
-        "X-Image-Source": officialUrl ? "original-creative-with-official-product" : "original-creative-only",
+        "X-Image-Source": officialUrl ? "scene-plus-official-product" : "scene-only",
         "X-Design-Mode": "original_creative",
+        "X-Composite-Seed": String(seed),
+        "X-Image-Prompt-Used": imagePrompt ? "1" : "0",
       },
     });
   } catch (err) {

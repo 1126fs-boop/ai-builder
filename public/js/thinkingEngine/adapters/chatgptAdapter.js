@@ -71,6 +71,10 @@ function buildChatGptImageBlock(prompts, imageDirective) {
     "- 商品画像用の余白を確保し、後から公式商品画像を加工せず配置",
   ];
 
+  if (imageDirective?.layoutInstructions) {
+    lines.push("", "【レイアウト指示 — 厳守】", imageDirective.layoutInstructions);
+  }
+
   if (imageDirective?.creativeBrief) {
     const cb = imageDirective.creativeBrief;
     lines.push(
@@ -109,6 +113,11 @@ function buildChatGptImageBlock(prompts, imageDirective) {
   }
 
   lines.push(
+    "",
+    "【再現性 — 同じ構図で生成するため】",
+    "- 上記 layoutInstructions / variationSeed / 商品配置位置を変更しない",
+    "- 背景のみ再生成する場合も商品配置ゾーンは同じ位置を空ける",
+    "- 公式商品画像URLの画像を1ピクセルも変更せず合成",
     "",
     "【手順】",
     "1. 上記プロンプトで背景・人物・光・レイアウト・装飾・コピーのみ生成（商品は描かない）",

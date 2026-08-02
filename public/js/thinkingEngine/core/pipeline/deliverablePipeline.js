@@ -12,8 +12,8 @@ import { runAnalysisPipeline } from "./analysisPipeline.js";
 import { createBlueprint, unwrapBlueprint } from "../types/blueprint.js";
 import {
   createGeneratedPrompt,
-  getPrimaryPromptText,
 } from "../types/generatedPrompt.js";
+import { getResultDisplayPromptText } from "../promptPresentation.js";
 import {
   CATEGORY_RECOMMENDED_ADAPTERS,
   CATEGORY_EXPECTED_ARTIFACT,
@@ -115,7 +115,7 @@ export function runDeliverablePipeline(categoryId, answers, options = {}) {
   });
 
   const unwrapped = unwrapBlueprint(blueprint);
-  const primaryText = getPrimaryPromptText(generatedPrompt);
+  const primaryText = getResultDisplayPromptText(generatedPrompt);
 
   const thinking = assembleThinkingResult({
     purpose: unwrapped.purpose?.primaryGoal ?? ctx.payload.purpose.primaryGoal,

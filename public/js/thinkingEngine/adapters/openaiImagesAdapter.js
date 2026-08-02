@@ -40,14 +40,14 @@ export const openaiImagesAdapter = {
     };
   },
 
-  /** 画像生成が可能か（imagePrompt + 公式画像URL または背景のみ） */
+  /** 画像生成が可能か（背景プロンプトがあれば合成プレビュー可） */
   canGenerate(generatedPrompt) {
     const payload = unwrapGeneratedPrompt(generatedPrompt);
     if (!payload.prompts?.imagePrompt) return false;
     const dir = payload.imageDirective;
     if (!dir) return true;
-    if (dir.mode === "official" && dir.officialImageUrl) return true;
-    if (dir.mode === "background_only") return true;
-    return Boolean(dir.officialImageUrl);
+    const mode = dir.mode ?? "background_only";
+    if (mode === "upload_required" && !dir.officialImageUrl) return false;
+    return true;
   },
 };

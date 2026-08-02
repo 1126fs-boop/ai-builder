@@ -25,7 +25,7 @@ import {
 } from "./ai/promptGenerationPipeline.js";
 import { yieldToMain } from "./ai/performanceProfiler.js";
 import { withTimeout } from "./asyncUtils.js";
-import { buildHandoff } from "./thinkingEngine/index.js";
+import { getChatGptHandoffText } from "./thinkingEngine/core/promptPresentation.js";
 import { openaiImagesAdapter } from "./thinkingEngine/adapters/openaiImagesAdapter.js";
 import { generateImageFromPrompt } from "./imageGenerationService.js";
 import { handoffPromptToChatGptApp } from "./chatgptHandoff.js";
@@ -245,10 +245,10 @@ function renderImageSection(item) {
     DOM.btnDownloadImage.hidden = !currentImageBlobUrl;
   }
 
-  if (DOM.imagePlaceholder && !currentImageBlobUrl) {
+  if (DOM.imagePlaceholder) {
     DOM.imagePlaceholder.hidden = false;
-      DOM.imagePlaceholder.textContent =
-      "「画像を生成」で、毎回異なるオリジナル背景＋公式商品画像の合成画像を作成できます";
+    DOM.imagePlaceholder.textContent =
+      "「完成イメージを生成」で、背景＋レイアウト＋公式商品画像の合成プレビューを表示します（ChatGPT と同じ imageDirective を使用）";
   }
 }
 
@@ -324,7 +324,7 @@ function learnIfPromptEdited(action) {
   });
 }
 
-/** ChatGPT アプリで開く */
+/** ChatGPT アプリで開く — Adapter 全文をベースに画像ブロックを維持 */
 export async function handoffToChatgpt() {
   const gp = currentGeneratedPrompt;
   if (!gp) {
@@ -333,8 +333,7 @@ export async function handoffToChatgpt() {
   }
 
   try {
-    const handoff = buildHandoff(gp, "chatgpt");
-    const promptText = getCurrentPromptText() || handoff.text;
+    const promptText = getChatGptHandoffText(gp, getCurrentPromptText());
     learnIfPromptEdited("handoff");
     const result = await handoffPromptToChatGptApp(promptText);
     showToast(result.ok ? result.message : result.message || "Handoff に失敗しました");
@@ -370,7 +369,7 @@ export async function generateResultImage() {
       DOM.imagePlaceholder.hidden = true;
     }
 
-    showToast("画像を生成しました（オリジナルデザイン + 公式商品画像）");
+    showToast("完成イメージを生成しました（背景＋公式商品配置）");
     if (DOM.btnDownloadImage) {
       DOM.btnDownloadImage.hidden = false;
     }
@@ -379,13 +378,13 @@ export async function generateResultImage() {
     showToast(err instanceof Error ? err.message : "画像生成に失敗しました");
     if (DOM.imagePlaceholder) {
       DOM.imagePlaceholder.hidden = false;
-      DOM.imagePlaceholder.textContent = "「画像を生成」ボタンで、背景＋公式商品画像の合成画像を作成できます";
+      DOM.imagePlaceholder.textContent = "「完成イメージを生成」で、背景＋公式商品画像の合成プレビューを作成できます";
     }
   } finally {
     imageGenInFlight = false;
     if (DOM.btnGenerateImage) {
       DOM.btnGenerateImage.disabled = false;
-      DOM.btnGenerateImage.textContent = "合成プレビュー（公式商品配置）";
+      DOM.btnGenerateImage.textContent = "完成イメージを生成";
     }
   }
 }

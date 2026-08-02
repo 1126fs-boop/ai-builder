@@ -155,7 +155,7 @@ export function buildImageDirective(productKnowledge, structure, answers, creati
   const brief = creativeBrief ?? structure?.creativeBrief ?? null;
 
   return {
-    mode: productKnowledge?.imageMode ?? "background_only",
+    mode: normalizeImageMode(productKnowledge?.imageMode),
     officialImageUrl: productKnowledge?.officialImageUrl ?? null,
     productName: productKnowledge?.name ?? answers.wam_product ?? null,
     productDescription: productKnowledge?.description ?? null,
@@ -164,11 +164,31 @@ export function buildImageDirective(productKnowledge, structure, answers, creati
     creativeBrief: brief,
     designMode: "original_creative",
     doNotMimicOfficialWebsite: true,
+    layoutInstructions: brief ? formatLayoutInstructions(brief) : null,
     uploadGuidance:
       productKnowledge?.imageMode === "upload_required"
         ? "公式商品画像または正規パッケージ写真をアップロードしてください"
         : null,
   };
+}
+
+/** imageMode を API / Adapter 間で統一 */
+function normalizeImageMode(mode) {
+  if (mode === "official") return "official";
+  if (mode === "upload_required") return "upload_required";
+  return "background_only";
+}
+
+/** レイアウト指示（ChatGPT / 合成API 共通） */
+function formatLayoutInstructions(brief) {
+  return [
+    `構図: ${brief.compositionStyle}`,
+    `配色: ${(brief.colorPalette || []).join(" / ")}`,
+    `商品配置: ${brief.productPlacement?.position || "center-right"}`,
+    `アスペクト: ${brief.aspect}`,
+    `タイポ方向: ${brief.typographyStyle}`,
+    `variationSeed: ${brief.variationSeed ?? "—"}`,
+  ].join("\n");
 }
 
 /** synthesis の Prompt Builder 向けヒント（AI会議統合含む） */

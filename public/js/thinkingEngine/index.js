@@ -139,6 +139,12 @@ export {
   unwrapGeneratedPrompt,
 } from "./core/types/generatedPrompt.js";
 export {
+  getResultDisplayPromptText,
+  getChatGptHandoffText,
+  getImageCompositePayload,
+  isImageCreativeUseCase,
+} from "./core/promptPresentation.js";
+export {
   serializePersistable,
   deserializePersistable,
   generatePersistableId,
