@@ -1,8 +1,8 @@
 /**
- * 画像生成 — オリジナルクリエイティブシーン + 公式商品画像合成
+ * 画像生成 — オリジナル背景 + 公式商品画像合成（プレビュー用）
  *
- * 公式HPのデザインは再現しない。背景・シーンは imagePrompt に従い AI 生成。
- * 商品画像のみ公式 URL から取得して配置する。
+ * OpenAI Images API は使用しない。背景はクリエイティブブリーフに基づく合成背景。
+ * 本番の画像生成はユーザーの ChatGPT アカウントで実行。
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -106,45 +106,6 @@ async function createCreativeFallbackBackground(
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
-/** OpenAI DALL-E でオリジナルシーン生成（API キーがある場合） */
-async function tryOpenAiBackground(imagePrompt: string | undefined, width: number, height: number) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey || !imagePrompt?.trim()) return null;
-
-  const size = width === height ? "1024x1024" : height > width ? "1024x1792" : "1792x1024";
-
-  try {
-    const res = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: `${imagePrompt}. Original promotional creative design, NOT a website reproduction, NOT mimicking any homepage. NO products, NO devices, NO machines, NO logos, NO text.`,
-        n: 1,
-        size,
-        response_format: "b64_json",
-      }),
-    });
-
-    if (!res.ok) {
-      console.warn("[generate-image] OpenAI error:", await res.text());
-      return null;
-    }
-
-    const data = await res.json();
-    const b64 = data?.data?.[0]?.b64_json;
-    if (!b64) return null;
-
-    return Buffer.from(b64, "base64");
-  } catch (err) {
-    console.warn("[generate-image] OpenAI fetch failed:", err);
-    return null;
-  }
-}
-
 /** 公式商品画像を取得 */
 async function fetchOfficialProduct(url: string) {
   const res = await fetch(url, {
@@ -198,16 +159,14 @@ function calcProductPosition(
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as GenerateImageBody;
-    const { imagePrompt, imageDirective } = body;
+    const { imageDirective } = body;
 
     const layoutSpec = imageDirective?.layoutSpec ?? {};
     const creativeBrief = imageDirective?.creativeBrief ?? undefined;
     const { width, height } = parseDimensions(layoutSpec, creativeBrief);
 
-    let background = await tryOpenAiBackground(imagePrompt, width, height);
-    if (!background) {
-      background = await createCreativeFallbackBackground(width, height, layoutSpec, creativeBrief);
-    }
+    // OpenAI Images API は使用せず、クリエイティブブリーフに基づく背景を生成
+    const background = await createCreativeFallbackBackground(width, height, layoutSpec, creativeBrief);
 
     let composite = sharp(background).resize(width, height, { fit: "cover" });
 

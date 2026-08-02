@@ -12,7 +12,8 @@ import {
 } from "../../domainKnowledge.js";
 import { resolveProductFromAnswers, getProductImageMode } from "../../../../wamProducts.js";
 import { WAM_IMAGE_GENERATION_RULES } from "../../../../wamImageContext.js";
-import { WAM_BRAND_RULES } from "./wamKnowledgeBase.js";
+import { WAM_BRAND_RULES, WAM_BRAND_TONE, WAM_USP, WAM_WORLDVIEW } from "./wamKnowledgeBase.js";
+import { getLearnedInsightsForAnalysis } from "./learningRegistry.js";
 import { LEARNED_KNOWLEDGE_ENABLED } from "./knowledgeTypes.js";
 import { generatePersistableId } from "../types/persistable.js";
 
@@ -128,10 +129,16 @@ export function buildKnowledgeSnapshot(categoryId, answers, challenge) {
     refs.push(...learnedItems.map((item) => item.id));
   }
 
+  const learned = getLearnedInsightsForAnalysis(categoryId);
+
   return {
     industryFacts,
     challengePatterns,
     productKnowledge,
+    brandTone: WAM_BRAND_TONE,
+    usp: WAM_USP,
+    worldview: WAM_WORLDVIEW,
+    learned,
     salesPrinciples: [...SALES_KNOW_HOW, DEFAULT_THINKING_PROCESS.split("\n")[0]],
     antiPatterns,
     companyRules: [

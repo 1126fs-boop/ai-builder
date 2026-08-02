@@ -149,6 +149,14 @@ export {
   buildKnowledgeSnapshot,
   listKnowledgeItems,
 } from "./core/knowledge/knowledgeRegistry.js";
+export {
+  registerSuccessCase,
+  registerUserRevision,
+  registerHighRatedPrompt,
+  registerIndustryInsight,
+  getLearnedInsightsForAnalysis,
+  listLearningRecords,
+} from "./core/knowledge/learningRegistry.js";
 export { runQualityGate, QUALITY_PASS_THRESHOLD } from "./core/quality/rubricFramework.js";
 export { buildHandoff, buildImageGenerationHandoff, getAdapter, listAdapters } from "./adapters/registry.js";
 

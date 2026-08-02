@@ -28,6 +28,7 @@ import { withTimeout } from "./asyncUtils.js";
 import { buildHandoff } from "./thinkingEngine/index.js";
 import { openaiImagesAdapter } from "./thinkingEngine/adapters/openaiImagesAdapter.js";
 import { generateImageFromPrompt } from "./imageGenerationService.js";
+import { openChatGptApp, getChatGptHandoffMessage } from "./chatgptHandoff.js";
 
 const LOG = "[resultView]";
 const GENERATION_TIMEOUT_MS = 15000;
@@ -210,6 +211,7 @@ function renderAdapterActions(item) {
 
   if (DOM.btnChatgptHandoff) {
     DOM.btnChatgptHandoff.hidden = !gp;
+    DOM.btnChatgptHandoff.textContent = "ChatGPTアプリで開く";
   }
 
   if (DOM.btnGenerateImage) {
@@ -299,7 +301,7 @@ function revokeImageBlob() {
   }
 }
 
-/** ChatGPT で開く（クリップボード Handoff） */
+/** ChatGPT アプリで開く（プロンプト事前コピー済み） */
 export async function handoffToChatgpt() {
   const gp = currentGeneratedPrompt;
   if (!gp) {
@@ -310,8 +312,8 @@ export async function handoffToChatgpt() {
   try {
     const handoff = buildHandoff(gp, "chatgpt");
     await copyToClipboard(handoff.text);
-    showToast("ChatGPT用プロンプトをコピーしました。ChatGPTを開いて貼り付けてください。");
-    window.open("https://chatgpt.com/", "_blank", "noopener,noreferrer");
+    const { platform } = openChatGptApp();
+    showToast(getChatGptHandoffMessage(platform));
   } catch (err) {
     showToast(err instanceof Error ? err.message : "Handoff に失敗しました");
   }
@@ -359,7 +361,7 @@ export async function generateResultImage() {
     imageGenInFlight = false;
     if (DOM.btnGenerateImage) {
       DOM.btnGenerateImage.disabled = false;
-      DOM.btnGenerateImage.textContent = "画像を生成";
+      DOM.btnGenerateImage.textContent = "合成プレビュー（公式商品配置）";
     }
   }
 }

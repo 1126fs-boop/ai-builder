@@ -12,6 +12,7 @@ import {
 } from "../domainKnowledge.js";
 import {
   buildBrandRulesBlock,
+  buildBrandWorldviewBlock,
   buildWamProductKnowledgeBlock,
   buildAnalysisReflectionBlock,
   buildKbScopeBlock,
@@ -43,7 +44,11 @@ export function buildSystemPrompt(config) {
   ];
 
   if (includeCreativeRules) {
-    lines.push(buildKbScopeBlock(), buildCreativeAntiPatternsBlock());
+    lines.push(
+      buildKbScopeBlock(),
+      buildBrandWorldviewBlock(),
+      buildCreativeAntiPatternsBlock()
+    );
   }
 
   lines.push(

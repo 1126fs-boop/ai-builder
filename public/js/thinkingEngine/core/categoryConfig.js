@@ -12,13 +12,13 @@ export const CATEGORY_LENSES = {
   image: ["marketer", "sns_manager", "beauty_consultant"],
 };
 
-/** 用途別 — 推奨 AI Adapter ID */
+/** 用途別 — 推奨 AI Adapter ID（画像生成は ChatGPT アプリ経由） */
 export const CATEGORY_RECOMMENDED_ADAPTERS = {
   proposal: ["chatgpt", "claude"],
-  sns: ["chatgpt", "openai_images"],
+  sns: ["chatgpt"],
   newsletter: ["chatgpt", "claude"],
   sales: ["chatgpt", "claude"],
-  image: ["openai_images", "chatgpt"],
+  image: ["chatgpt"],
 };
 
 /** 用途別 — 期待する外部AI成果物（アプリの責務外・参考情報） */

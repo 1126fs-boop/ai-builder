@@ -97,6 +97,52 @@ const FORMAT_PROFILES = {
   },
 };
 
+/** クリエイティブスタイルプリセット（毎回異なる方向性） */
+const CREATIVE_STYLE_PRESETS = [
+  {
+    id: "instagram_modern",
+    label: "Instagram風",
+    composition: "social-native bold visual, thumb-stopping feed aesthetic",
+    scene: "trendy social media ready beauty promotional scene",
+    typography: "bold sans-serif social media headline style",
+  },
+  {
+    id: "magazine_editorial",
+    label: "雑誌風",
+    composition: "editorial magazine spread layout with elegant whitespace",
+    scene: "high-end beauty magazine editorial backdrop",
+    typography: "serif headline with refined editorial hierarchy",
+  },
+  {
+    id: "luxury_premium",
+    label: "高級感",
+    composition: "luxury premium asymmetric layout with gold accents space",
+    scene: "luxury spa salon atmosphere with premium materials",
+    typography: "elegant luxury serif with generous letter spacing",
+  },
+  {
+    id: "korean_beauty",
+    label: "韓国風",
+    composition: "K-beauty clean minimal layout with soft gradients",
+    scene: "Korean beauty aesthetic clean studio with soft pastel tones",
+    typography: "clean modern Korean beauty brand typography style",
+  },
+  {
+    id: "apple_minimal",
+    label: "Apple風",
+    composition: "Apple-style minimal hero layout with generous negative space",
+    scene: "ultra-clean minimalist product showcase environment without products",
+    typography: "San Francisco inspired clean minimal type hierarchy",
+  },
+  {
+    id: "dynamic_bold",
+    label: "ダイナミック",
+    composition: "dynamic diagonal composition with energy and movement",
+    scene: "bold energetic beauty business promotional environment",
+    typography: "impactful bold display typography zones",
+  },
+];
+
 /** 配色パレット候補（HP配色ではなく毎回選ぶ） */
 const COLOR_PALETTES = [
   ["deep navy", "gold accent", "cream white"],
@@ -193,6 +239,7 @@ export function generateCreativeBrief(categoryId, answers, challenge, purpose = 
         : "1:1（1080×1080）");
 
   const productPlacement = pickFrom(PRODUCT_PLACEMENTS, seed, 2);
+  const stylePreset = pickFrom(CREATIVE_STYLE_PRESETS, seed, 7);
 
   return {
     formatType: profile.key,
@@ -200,16 +247,18 @@ export function generateCreativeBrief(categoryId, answers, challenge, purpose = 
     aspect,
     mood: pickFrom(moods, seed),
     colorPalette: pickFrom(COLOR_PALETTES, seed, 1),
-    typographyStyle: pickFrom(TYPOGRAPHY_STYLES, seed, 3),
-    compositionStyle: pickFrom(profile.compositions, seed),
-    sceneConcept: pickFrom(profile.scenes, seed, 5),
+    typographyStyle: stylePreset.typography || pickFrom(TYPOGRAPHY_STYLES, seed, 3),
+    compositionStyle: stylePreset.composition || pickFrom(profile.compositions, seed),
+    sceneConcept: stylePreset.scene || pickFrom(profile.scenes, seed, 5),
+    creativeStyle: stylePreset.label,
+    creativeStyleId: stylePreset.id,
     productPlacement,
     variationSeed: seed,
     designPrinciples: [
-      "公式HPはKnowledge Baseのみ（商品情報・商品画像・ブランドルール）",
+      "公式HPはKnowledge Baseのみ（商品情報・USP・ブランドトーン・世界観・商品画像）",
       "公式HPのレイアウト・配色・タイポグラフィは再現しない",
-      "背景・人物・レイアウト・装飾・配色・タイポは毎回ゼロから新規設計",
-      "商品画像のみ公式画像を配置（AI生成・改変禁止）",
+      "背景・人物・光・レイアウト・装飾・コピーは毎回ゼロから新規設計",
+      "商品画像のみ公式画像を後から合成（AI生成・改変禁止）",
     ],
     challengeHook: challenge?.surfaceChallenge || "",
     appealAxis: appeal,
@@ -251,6 +300,7 @@ export function buildCreativeDesignPrinciplesBlock(creativeBrief) {
     "- 背景・人物・レイアウト・装飾・配色・タイポは毎回ゼロから新規設計",
     "- 商品画像のみ公式画像を配置（AI生成・改変禁止）",
     `- 今回の用途: ${cb.formatLabel}`,
+    `- クリエイティブスタイル: ${cb.creativeStyle || "オリジナル"}`,
     `- 構図: ${cb.compositionStyle}`,
     `- シーン: ${cb.sceneConcept}`,
     `- 配色: ${cb.colorPalette.join(" / ")}`,

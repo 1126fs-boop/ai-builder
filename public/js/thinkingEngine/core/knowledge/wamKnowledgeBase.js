@@ -9,9 +9,9 @@ import { WAM_OFFICIAL_SITE, WAM_PRODUCT_INDEX, resolveProductFromAnswers } from 
 
 /** 公式HPから取得してよい情報（Knowledge Base のみ） */
 export const WAM_KB_FROM_HP = [
-  "商品名・カテゴリ・公式説明文",
+  "商品名・カテゴリ・公式説明文・USP",
   "公式商品画像URL",
-  "ブランドルール・コピー表現ガイド",
+  "ブランドルール・ブランドトーン・世界観・コピー表現ガイド",
 ];
 
 /** 公式HPから取得してはいけない情報（デザインテンプレート禁止） */
@@ -43,6 +43,28 @@ export const WAM_CREATIVE_ANTI_PATTERNS = [
   "商品画像以外を公式HPの見た目に合わせない",
 ];
 
+/** 株式会社ワム — ブランドトーン・世界観（Knowledge Base — デザインテンプレートではない） */
+export const WAM_BRAND_TONE = {
+  primary: "高級感・信頼感・プロフェッショナル",
+  voice: "経営課題解決を最優先。商品スペックから入らない",
+  avoid: "安売り感・煽り・AIっぽい表現・誇大広告",
+};
+
+/** 株式会社ワム — USP（Unique Selling Proposition） */
+export const WAM_USP = [
+  "美容業界BtoBのソリューション営業 — 経営課題から提案",
+  "業務用エステ機器・化粧品・インナーケアまで一貫サポート",
+  "サロン経営の売上アップ・リピート率向上・業務効率化に貢献",
+  "導入から運用まで伴走するパートナー",
+];
+
+/** 株式会社ワム — ブランド世界観（コピー・クリエイティブの方向性） */
+export const WAM_WORLDVIEW = [
+  "サロンオーナーの経営成功を真剣に支援するパートナー",
+  "施術のプロフェッショナルと経営者の両方に寄り添う",
+  "美容業界の未来を、テクノロジーと人の力で創る",
+  "信頼・実績・継続支援 — 一過性の売り切りではない",
+];
 /** 株式会社ワム — ブランドルール（全 Prompt Builder 共通） */
 export const WAM_BRAND_RULES = [
   "株式会社ワムは美容業界BtoBのソリューション営業企業",
@@ -139,6 +161,24 @@ export function buildKbScopeBlock() {
  */
 export function buildCreativeAntiPatternsBlock() {
   return ["【クリエイティブ禁止事項】", ...WAM_CREATIVE_ANTI_PATTERNS.map((r) => `- ${r}`)].join("\n");
+}
+
+/**
+ * ブランドトーン・USP・世界観ブロック（Knowledge Base）
+ */
+export function buildBrandWorldviewBlock() {
+  return [
+    "【WAM ブランド Knowledge — HPから取得（デザイン参考禁止）】",
+    `- ブランドトーン: ${WAM_BRAND_TONE.primary}`,
+    `- 文体: ${WAM_BRAND_TONE.voice}`,
+    `- 避ける表現: ${WAM_BRAND_TONE.avoid}`,
+    "",
+    "【USP（独自の強み）】",
+    ...WAM_USP.map((u) => `- ${u}`),
+    "",
+    "【ブランド世界観】",
+    ...WAM_WORLDVIEW.map((w) => `- ${w}`),
+  ].join("\n");
 }
 
 /**
