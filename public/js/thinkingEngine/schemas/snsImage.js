@@ -3,6 +3,7 @@
  */
 
 import { getProductChoiceOptions } from "../../../wamProducts.js";
+import { applyFreeInputQualityBonus } from "./_sharedSchemaFields.js";
 
 const APPEAL_OPTIONS = ["売上アップ", "導入メリット", "新商品告知", "成功事例", "リピート率向上"];
 
@@ -78,7 +79,9 @@ export const SNS_IMAGE_SCHEMA = {
       reason: "キャッチ方向があるとコピー精度が上がる",
     },
   ],
-  maxDynamicQuestions: 3,
+  maxDynamicQuestions: 4,
+  minimumQualityScore: 0.65,
+  qualityRequiredFields: ["sns_format", "appeal_axis", "wam_product", "target_audience"],
   inferDefaults(answers) {
     const fmt = answers.sns_format || "Instagram投稿";
     const aspectMap = {
@@ -89,18 +92,19 @@ export const SNS_IMAGE_SCHEMA = {
     };
     return {
       aspect: aspectMap[fmt] || "1:1",
+      target_audience: answers.target_audience || "サロンオーナー",
       tone: "高級感・信頼感（ワムブランド準拠）",
       output_format: fmt.includes("リール") ? "リール構成+画像プロンプト" : "画像生成プロンプト（英語）+キャプション",
     };
   },
   estimateQuality(answers, pending) {
-    let s = 0.35;
+    let s = 0.3;
     if (answers.sns_format) s += 0.15;
     if (answers.appeal_axis) s += 0.15;
     if (answers.wam_product) s += 0.2;
     if (answers.target_audience) s += 0.15;
     if (answers.catch_direction?.trim()) s += 0.1;
-    s -= pending * 0.05;
-    return Math.min(1, Math.max(0, Math.round(s * 100) / 100));
+    s -= pending * 0.04;
+    return applyFreeInputQualityBonus(Math.min(1, Math.max(0, Math.round(s * 100) / 100)), answers);
   },
 };

@@ -2,6 +2,8 @@
  * メルマガ・LINE配信 — Question Schema
  */
 
+import { applyFreeInputQualityBonus } from "./_sharedSchemaFields.js";
+
 /** @type {import("./types.js").SchemaQuestion[]} */
 const SEED = [
   {
@@ -75,7 +77,9 @@ export const NEWSLETTER_LINE_SCHEMA = {
       reason: "新商品案内では商品名・テーマが必要",
     },
   ],
-  maxDynamicQuestions: 3,
+  maxDynamicQuestions: 4,
+  minimumQualityScore: 0.6,
+  qualityRequiredFields: ["channel", "purpose", "audience", "value"],
   inferDefaults(answers) {
     const toneMap = {
       新規見込み客: "ビジネスライク・信頼構築",
@@ -94,13 +98,13 @@ export const NEWSLETTER_LINE_SCHEMA = {
     };
   },
   estimateQuality(answers, pending) {
-    let s = 0.35;
+    let s = 0.3;
     if (answers.channel) s += 0.15;
     if (answers.purpose) s += 0.15;
     if (answers.audience) s += 0.15;
     if (answers.value) s += 0.15;
     if (answers.product_topic?.trim()) s += 0.1;
-    s -= pending * 0.05;
-    return Math.min(1, Math.max(0, Math.round(s * 100) / 100));
+    s -= pending * 0.04;
+    return applyFreeInputQualityBonus(Math.min(1, Math.max(0, Math.round(s * 100) / 100)), answers);
   },
 };

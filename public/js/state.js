@@ -13,7 +13,10 @@ export const state = {
   /** Schema フロー用 */
   questionFlow: null,
   gapAnalysisDone: false,
+  gapAnalysisRound: 0,
+  askedFollowUpIds: [],
   inferredAnswers: {},
+  lastGapQuality: null,
 };
 
 export function resetFlow() {
@@ -23,7 +26,10 @@ export function resetFlow() {
   state.savedPromptId = null;
   state.questionFlow = null;
   state.gapAnalysisDone = false;
+  state.gapAnalysisRound = 0;
+  state.askedFollowUpIds = [];
   state.inferredAnswers = {};
+  state.lastGapQuality = null;
 }
 
 export function resetAll() {

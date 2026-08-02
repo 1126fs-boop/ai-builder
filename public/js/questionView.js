@@ -5,6 +5,7 @@
 import { getCategory } from "../categories.js";
 import { getQuestions } from "../questions.js";
 import { hasSchemaFlow, getSeedQuestions, runGapAnalysis } from "./thinkingEngine/schemas/index.js";
+import { ABSOLUTE_MAX_GAP_ROUNDS } from "./thinkingEngine/schemas/_sharedSchemaFields.js";
 import { state, resetFlow } from "./state.js";
 import { DOM, showView } from "./ui.js";
 import { addRecentCategory } from "./storage.js";
@@ -41,6 +42,7 @@ const QUESTION_HINTS = {
   appeal_point: "訴求軸でヘッドラインとビジュアルが決まります",
   display_location: "掲示場所で文字サイズとレイアウトが変わります",
   size_format: "サイズ指定があるとデザイン指示が具体化します",
+  free_input: "質問では拾えない情報（必須要素・イメージ・補足）を書くと品質が上がります",
 };
 
 export function initQuestionView(handlers) {
@@ -73,7 +75,10 @@ export function startCategory(categoryId) {
     if (hasSchemaFlow(categoryId)) {
       state.questionFlow = [...getSeedQuestions(categoryId)];
       state.gapAnalysisDone = false;
+      state.gapAnalysisRound = 0;
+      state.askedFollowUpIds = [];
       state.inferredAnswers = {};
+      state.lastGapQuality = null;
     }
 
     if (!DOM.wizardCategory) {
@@ -100,7 +105,10 @@ function getActiveQuestions() {
 }
 
 function renderProgress(current, total) {
-  DOM.progressLabel.textContent = `質問 ${current} / ${total}`;
+  const isQualityCheck = state.gapAnalysisRound > 0;
+  DOM.progressLabel.textContent = isQualityCheck
+    ? `品質確認 ${current} / ${total}`
+    : `質問 ${current} / ${total}`;
 
   DOM.progressSegments.innerHTML = "";
   for (let i = 0; i < total; i++) {
@@ -128,8 +136,10 @@ export function renderQuestion() {
 
   DOM.questionNumber.textContent = `STEP ${index + 1}`;
   DOM.questionText.textContent = question.text;
-  DOM.questionHint.textContent = QUESTION_HINTS[question.id] || "";
-  DOM.questionHint.hidden = !QUESTION_HINTS[question.id];
+  const reasonHint = question._reason ? `💡 ${question._reason}` : "";
+  const baseHint = QUESTION_HINTS[question.id] || question.hint || "";
+  DOM.questionHint.textContent = [reasonHint, baseHint].filter(Boolean).join(" ");
+  DOM.questionHint.hidden = !DOM.questionHint.textContent;
 
   DOM.optionsContainer.innerHTML = "";
   DOM.textInputArea.hidden = true;
@@ -252,27 +262,63 @@ function updateNavButtons(question) {
 
   const total = getActiveQuestions().length;
   const isLast = state.questionIndex >= total - 1;
-  DOM.btnNextLabel.textContent = isLast ? "プロンプトを生成" : "次へ";
+  const isFollowUp = question._reason != null;
+  if (isLast && isFollowUp) {
+    DOM.btnNextLabel.textContent = question.optional ? "スキップして生成" : "回答して生成";
+  } else if (isLast && hasSchemaFlow(state.categoryId)) {
+    DOM.btnNextLabel.textContent = "品質を確認";
+  } else if (isLast) {
+    DOM.btnNextLabel.textContent = "プロンプトを生成";
+  } else {
+    DOM.btnNextLabel.textContent = "次へ";
+  }
+}
+
+/** ギャップ分析を実行し、追問があれば questionFlow に追加 */
+function runGapAndMaybeExtendFlow() {
+  const gap = runGapAnalysis(state.categoryId, state.answers, {
+    askedQuestionIds: state.askedFollowUpIds,
+  });
+  state.inferredAnswers = gap.inferredAnswers ?? {};
+  state.lastGapQuality = {
+    score: gap.qualityScore,
+    minimum: gap.minimumQualityScore,
+    sufficient: gap.qualitySufficient,
+    missing: gap.missingQualityFields ?? [],
+  };
+
+  for (const [key, val] of Object.entries(state.inferredAnswers)) {
+    if (val && !state.answers[key]?.trim()) {
+      state.answers[key] = val;
+    }
+  }
+
+  if (gap.followUpQuestions.length > 0) {
+    gap.followUpQuestions.forEach((q) => state.askedFollowUpIds.push(q.id));
+    const current = getActiveQuestions();
+    state.questionFlow = [...current, ...gap.followUpQuestions];
+    state.gapAnalysisRound += 1;
+    return true;
+  }
+
+  // 追問なし = 品質OK または これ以上聞く項目なし
+  state.gapAnalysisDone = true;
+  return false;
 }
 
 export async function goNext() {
   const questions = getActiveQuestions();
   const isLast = state.questionIndex >= questions.length - 1;
 
-  if (isLast && hasSchemaFlow(state.categoryId) && !state.gapAnalysisDone) {
-    const gap = runGapAnalysis(state.categoryId, state.answers);
-    state.inferredAnswers = gap.inferredAnswers ?? {};
-    state.gapAnalysisDone = true;
-
-    // KB 補完分を回答に反映（ユーザーには見せず内部で利用）
-    for (const [key, val] of Object.entries(state.inferredAnswers)) {
-      if (val && !state.answers[key]?.trim()) {
-        state.answers[key] = val;
-      }
-    }
-
-    if (gap.followUpQuestions.length > 0) {
-      state.questionFlow = [...questions, ...gap.followUpQuestions];
+  // 品質ベースのギャップ分析（十分なら追問ゼロ / 不足時だけ追加 / 安全弁あり）
+  if (
+    isLast &&
+    hasSchemaFlow(state.categoryId) &&
+    !state.gapAnalysisDone &&
+    state.gapAnalysisRound < ABSOLUTE_MAX_GAP_ROUNDS
+  ) {
+    const extended = runGapAndMaybeExtendFlow();
+    if (extended) {
       state.questionIndex++;
       state.customDraft = null;
       renderQuestion();

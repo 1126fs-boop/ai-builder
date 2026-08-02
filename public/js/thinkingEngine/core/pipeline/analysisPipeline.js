@@ -17,7 +17,7 @@ import { buildAnalysisIntelligence } from "../analyzers/analysisIntelligence.js"
 import { createAnalysisContext } from "../types/analysisContext.js";
 import { generatePersistableId } from "../types/persistable.js";
 
-export function runWizardAnalysis(categoryId, answers) {
+export function runWizardAnalysis(categoryId, answers, options = {}) {
   const schema = getSchemaForCategory(categoryId);
   if (!schema) return { gap: emptyGapAnalysis(), purpose: null, challenge: null, enrichment: null };
 
@@ -30,6 +30,7 @@ export function runWizardAnalysis(categoryId, answers) {
     enrichedFields: enrichment.enrichedFields,
     enrichmentSources: enrichment.enrichmentSources,
     enrichmentConfidence: enrichment.enrichmentConfidence,
+    askedQuestionIds: options.askedQuestionIds ?? [],
   });
 
   return { gap, purpose, challenge, enrichment };

@@ -39,6 +39,7 @@ export function analyzeChallenge(categoryId, answers, purpose) {
   if (answers.client_challenge || resolved.challengeExplicit) confidence += 0.2;
   if (answers.client_context?.trim()) confidence += 0.15;
   if (answers.hearing_notes?.trim()) confidence += 0.1;
+  if (answers.free_input?.trim()) confidence += 0.12;
   confidence = Math.min(1, Math.round(confidence * 100) / 100);
 
   return {

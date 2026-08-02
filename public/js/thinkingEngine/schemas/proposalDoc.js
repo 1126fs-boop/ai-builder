@@ -3,6 +3,7 @@
  */
 
 import { CLIENT_INDUSTRY_OPTIONS } from "../../../context.js";
+import { applyFreeInputQualityBonus } from "./_sharedSchemaFields.js";
 
 /** @type {import("./types.js").SchemaQuestion[]} */
 export const PROPOSAL_SEED_QUESTIONS = [
@@ -117,7 +118,9 @@ export const PROPOSAL_DOC_SCHEMA = {
   seedQuestions: PROPOSAL_SEED_QUESTIONS,
   dynamicQuestions: PROPOSAL_DYNAMIC_QUESTIONS,
   dynamicRules: PROPOSAL_DYNAMIC_RULES,
-  maxDynamicQuestions: 3,
+  maxDynamicQuestions: 4,
+  minimumQualityScore: 0.65,
+  qualityRequiredFields: ["industry", "client_challenge", "proposal_scope", "product_area"],
   inferDefaults(answers) {
     const scope = answers.proposal_scope || "ソリューション提案書（初回）";
     const inferred = {
@@ -131,14 +134,14 @@ export const PROPOSAL_DOC_SCHEMA = {
     return inferred;
   },
   estimateQuality(answers, pending) {
-    let s = 0.4;
+    let s = 0.35;
     if (answers.industry) s += 0.15;
     if (answers.client_challenge) s += 0.15;
     if (answers.proposal_scope) s += 0.15;
     if (answers.product_area) s += 0.1;
-    if (answers.client_context?.trim()) s += 0.15;
-    if (answers.hearing_notes?.trim()) s += 0.1;
-    s -= pending * 0.05;
-    return Math.min(1, Math.max(0, Math.round(s * 100) / 100));
+    if (answers.client_context?.trim()) s += 0.12;
+    if (answers.hearing_notes?.trim()) s += 0.08;
+    s -= pending * 0.04;
+    return applyFreeInputQualityBonus(Math.min(1, Math.max(0, Math.round(s * 100) / 100)), answers);
   },
 };
