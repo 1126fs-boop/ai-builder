@@ -6,6 +6,7 @@
  */
 
 import { getCategoryRubricProfile } from "./rubricLearningRegistry.js";
+import { measureOpinionDiversity } from "../analyzers/lensPersonas.js";
 
 /** Council 品質合格ライン */
 export const COUNCIL_PASS_THRESHOLD = 0.72;
@@ -59,10 +60,25 @@ export function evaluateCouncilQuality(categoryId, councilOutput) {
   }
 
   const structuralOk = synthesis.finalDirection?.trim() && lensReviews.length >= 2;
+  const diversity = measureOpinionDiversity(
+    lensReviews.filter((r) => r.round === 1 || r.round === 3).slice(0, 6)
+  );
+  const debateDepth = lensReviews.filter((r) => r.stance === "counter").length >= 2;
+  const diversityOk = diversity >= 0.25;
+
+  if (!diversityOk) {
+    improvements.unshift(`[AI会議] Lens意見の多様性不足（${Math.round(diversity * 100)}%）— 専門性の違いを明確化`);
+  }
+  if (!debateDepth) {
+    improvements.unshift("[AI会議] 反論・対立が不足 — 各Lensの専門視点で再議論");
+  }
+
   const passed =
     structuralOk &&
     score >= passThreshold &&
-    criticalFailed.length === 0;
+    criticalFailed.length === 0 &&
+    diversityOk &&
+    debateDepth;
 
   return {
     passed,
@@ -72,6 +88,8 @@ export function evaluateCouncilQuality(categoryId, councilOutput) {
     failedChecks,
     improvements: [...new Set(improvements)].slice(0, 8),
     rubricLabel: profile.label,
+    opinionDiversity: diversity,
+    debateDepth,
   };
 }
 

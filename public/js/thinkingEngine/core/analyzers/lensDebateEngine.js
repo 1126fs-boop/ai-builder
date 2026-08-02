@@ -4,6 +4,8 @@
  * テンプレートの言い換えではなく、役割固有の評価軸・反論・改善案を出す。
  */
 
+import { evaluateByLensAxes, getLensPersona } from "./lensPersonas.js";
+
 /** Lens 間の対立マトリクス（A が B に反論しやすい） */
 const CONFLICT_TARGETS = {
   sns: ["copy", "design"],
@@ -50,6 +52,20 @@ export function buildLensProposal(lens, ctx) {
   };
 
   let insight = (builders[lens.id] || (() => `${lens.label}: ${lens.focus} — ${sc}`))();
+  const evaluation = evaluateByLensAxes(lens, ctx);
+  const persona = evaluation.persona;
+
+  // 評価軸の結果を Lens 固有の指摘として付加（同質化を防ぐ）
+  if (evaluation.findings.length) {
+    insight += ` ${persona.voice}の指摘: ${evaluation.findings[0]}`;
+  } else if (evaluation.passes[0]) {
+    insight += ` (${evaluation.passes[0]})`;
+  }
+
+  if (ctx.qualityFeedback?.length) {
+    const fb = ctx.qualityFeedback.find((f) => f.includes(lens.label) || f.includes(persona.priorities[0]));
+    if (fb) insight += ` 【品質再評価】${fb.replace(/^\[[^\]]+\]\s*/, "")}`;
+  }
 
   if (categoryId === "sns" && lens.id === "design") {
     insight += " 保存率より「読了→タップ」の導線設計が先。";
@@ -66,10 +82,12 @@ export function buildLensProposal(lens, ctx) {
 }
 
 /** 第2ラウンド — 他 Lens への反論・補足（役割がぶつかる） */
-export function buildLensDebate(lens, ctx, targetOpinion) {
+export function buildLensDebate(lens, ctx, targetOpinion, options = {}) {
   const targetLabel = targetOpinion?.lensLabel || "他Lens";
   const targetInsight = targetOpinion?.insight || "";
   const sc = ctx.challenge.surfaceChallenge || "経営課題";
+  const persona = getLensPersona(lens.id);
+  const forceCounter = options.forceCounter === true;
 
   const counterTemplates = {
     sns: `【反論→${targetLabel}】「${truncate(targetInsight, 50)}」は来店導線が弱い。保存後のCTA1つに絞れ。`,
@@ -84,10 +102,16 @@ export function buildLensDebate(lens, ctx, targetOpinion) {
     roi: `【反論→${targetLabel}】数字の根拠が薄い。【】試算かPoC条件を明示。`,
   };
 
-  const stance = counterTemplates[lens.id]?.includes("反論") ? "counter" : "supplement";
+  const stance =
+    forceCounter || counterTemplates[lens.id]?.includes("反論") ? "counter" : "supplement";
+
+  let insight = counterTemplates[lens.id] || `【検討→${targetLabel}】${lens.focus}の視点: ${lens.example}`;
+  if (persona.rejects[0]) {
+    insight += `（${persona.voice}: ${persona.rejects[0]}を避ける）`;
+  }
 
   return {
-    insight: counterTemplates[lens.id] || `【検討→${targetLabel}】${lens.focus}の視点: ${lens.example}`,
+    insight,
     recommendation: buildLensRecommendation(lens, ctx),
     stance,
     counterpoint: `${targetLabel}への${stance === "counter" ? "反論" : "補足"}`,
@@ -117,15 +141,22 @@ export function buildLensRefinement(lens, ctx, round1, round2) {
   };
 }
 
-/** 反論対象 Lens を選ぶ */
-export function pickDebateTarget(lensId, panel, round1Ops) {
+/** 反論対象 Lens を選ぶ（skipFirst で再議論時に別ターゲット） */
+export function pickDebateTarget(lensId, panel, round1Ops, skipFirst = false) {
   const targets = CONFLICT_TARGETS[lensId] || [];
+  let skipped = !skipFirst;
   for (const tid of targets) {
     const op = round1Ops.find((o) => o.lensId === tid);
-    if (op) return op;
+    if (op) {
+      if (!skipped) {
+        skipped = true;
+        continue;
+      }
+      return op;
+    }
   }
   const idx = panel.findIndex((l) => l.id === lensId);
-  return round1Ops[(idx + 1) % round1Ops.length];
+  return round1Ops[(idx + (skipFirst ? 2 : 1)) % round1Ops.length];
 }
 
 function buildLensRecommendation(lens, ctx) {

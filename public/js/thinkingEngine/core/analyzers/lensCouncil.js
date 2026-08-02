@@ -12,10 +12,12 @@ import {
   buildLensRefinement,
   pickDebateTarget,
 } from "./lensDebateEngine.js";
+import { measureOpinionDiversity, needsRedebate } from "./lensPersonas.js";
 
 const ROUND_LABELS = {
   1: { id: "proposal", label: "第1ラウンド：専門意見" },
   2: { id: "debate", label: "第2ラウンド：反論・補足" },
+  2.5: { id: "redebate", label: "再議論ラウンド：対立の深掘り" },
   3: { id: "refinement", label: "第3ラウンド：改善・統合" },
 };
 
@@ -30,18 +32,39 @@ export function runLensCouncil(categoryId, input, options = {}) {
   const { qualityFeedback = null, iteration = 0, isRetry = false } = options;
   const panel = getLensPanelForCategory(categoryId);
   const rounds = [];
+  const debateCtx = { ...input, categoryId, qualityFeedback };
 
-  const round1 = panel.map((lens) => buildRoundOpinion(lens, 1, categoryId, input, null, panel, null));
+  const round1 = panel.map((lens) => buildRoundOpinion(lens, 1, categoryId, debateCtx, null, panel, null));
   rounds.push({ round: 1, ...ROUND_LABELS[1], opinions: round1 });
 
   const round2 = panel.map((lens) => {
     const target = pickDebateTarget(lens.id, panel, round1);
-    return buildRoundOpinion(lens, 2, categoryId, input, target, panel, round1);
+    return buildRoundOpinion(lens, 2, categoryId, debateCtx, target, panel, round1);
   });
   rounds.push({ round: 2, ...ROUND_LABELS[2], opinions: round2 });
 
+  // 意見が同質化 / 反論不足 → 再議論ラウンド
+  let lastRound2 = round2;
+  if (needsRedebate(round1, round2)) {
+    const round25 = panel.map((lens) => {
+      const altTarget = pickDebateTarget(lens.id, panel, round1, true);
+      const debate = buildLensDebate(lens, debateCtx, altTarget, { forceCounter: true });
+      return {
+        lensId: lens.id,
+        lensLabel: lens.label,
+        round: 2.5,
+        stance: debate.stance,
+        insight: `【再議論】${debate.insight}`,
+        recommendation: debate.recommendation,
+        counterpoint: debate.counterpoint,
+      };
+    });
+    rounds.push({ round: 2.5, ...ROUND_LABELS[2.5], opinions: round25 });
+    lastRound2 = round25;
+  }
+
   const round3 = panel.map((lens, i) =>
-    buildRoundOpinion(lens, 3, categoryId, input, { round1: round1[i], round2: round2[i] }, panel, round1)
+    buildRoundOpinion(lens, 3, categoryId, debateCtx, { round1: round1[i], round2: lastRound2[i] }, panel, round1)
   );
   rounds.push({ round: 3, ...ROUND_LABELS[3], opinions: round3 });
 
@@ -85,6 +108,8 @@ export function runLensCouncil(categoryId, input, options = {}) {
       })),
       qualityIteration: iteration + 1,
       hadQualityRetry: isRetry,
+      opinionDiversity: measureOpinionDiversity(round1),
+      hadRedebate: rounds.some((r) => r.round === 2.5),
     },
   };
 }
@@ -213,7 +238,10 @@ function synthesizeCouncil({ categoryId, panel, rounds, purpose, challenge, know
     );
   }
 
-  const round2Ops = rounds[1]?.opinions ?? [];
+  const round2Ops = [
+    ...(rounds[1]?.opinions ?? []),
+    ...(rounds.find((r) => r.round === 2.5)?.opinions ?? []),
+  ];
   const tensions = [
     ...round2Ops.filter((o) => o.stance === "counter").map((o) => `${o.lensLabel}: ${o.insight}`),
     ...lensReviews.filter((l) => l.counterpoint).map((l) => l.counterpoint),

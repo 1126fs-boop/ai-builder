@@ -9,6 +9,7 @@ import {
   generateCreativeBrief,
   creativeBriefToLayoutSpec,
 } from "../creative/creativeDesignEngine.js";
+import { composeCreativeLayout } from "../creative/creativeLayoutComposer.js";
 
 /** カテゴリ別デフォルト構成 */
 const DEFAULT_SECTIONS = {
@@ -97,10 +98,18 @@ export function planStructure(categoryId, input) {
   }
 
   const copyStrategy = buildCopyStrategy(categoryId, purpose, challenge);
-  const creativeBrief =
+  const creativeBriefRaw =
     categoryId === "sns" || categoryId === "image"
       ? generateCreativeBrief(categoryId, answers, challenge, purpose)
       : null;
+  const creativeBrief = creativeBriefRaw
+    ? {
+        ...creativeBriefRaw,
+        layoutPlan: composeCreativeLayout(creativeBriefRaw, {
+          productName: knowledge?.productKnowledge?.name ?? answers.wam_product,
+        }),
+      }
+    : null;
   const layoutSpec = creativeBrief
     ? creativeBriefToLayoutSpec(creativeBrief, knowledge?.productKnowledge)
     : null;

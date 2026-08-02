@@ -325,5 +325,6 @@ export function creativeBriefToLayoutSpec(creativeBrief, productKnowledge) {
     productImageMode: productKnowledge?.imageMode ?? "none",
     officialImageUrl: productKnowledge?.officialImageUrl ?? null,
     doNotMimicOfficialWebsite: true,
+    layoutPlan: creativeBrief.layoutPlan ?? null,
   };
 }

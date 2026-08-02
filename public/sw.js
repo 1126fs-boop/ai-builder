@@ -83,6 +83,8 @@ const PRECACHE = [
   "/js/thinkingEngine/core/analyzers/lensRegistry.js",
   "/js/thinkingEngine/core/analyzers/lensCouncil.js",
   "/js/thinkingEngine/core/analyzers/lensDebateEngine.js",
+  "/js/thinkingEngine/core/analyzers/lensPersonas.js",
+  "/js/thinkingEngine/core/creative/creativeLayoutComposer.js",
   "/js/thinkingEngine/core/analyzers/inputEnricher.js",
   "/js/thinkingEngine/core/quality/councilQualityGate.js",
   "/js/thinkingEngine/core/analyzers/structurePlanner.js",
