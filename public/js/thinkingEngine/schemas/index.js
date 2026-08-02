@@ -36,17 +36,20 @@ export function hasSchemaFlow(categoryId) {
  * 不足情報分析 — thinkingCore フェーズ1〜3 経由
  * @param {string} categoryId
  * @param {Object} answers
+ * @param {{ askedQuestionIds?: string[] }} [options]
  */
-export function runGapAnalysis(categoryId, answers) {
+export function runGapAnalysis(categoryId, answers, options = {}) {
   const schema = getSchemaForCategory(categoryId);
   if (!schema) return emptyGapAnalysis();
 
-  const { gap } = runWizardAnalysis(categoryId, answers);
+  const { gap } = runWizardAnalysis(categoryId, answers, options);
   return gap;
 }
 
+/** seed 質問のみ（自由記述は品質不足時に gap が追加） */
 export function getSeedQuestions(categoryId) {
-  return getSchemaForCategory(categoryId)?.seedQuestions || [];
+  const schema = getSchemaForCategory(categoryId);
+  return schema?.seedQuestions ?? [];
 }
 
 /** Blueprint 対応カテゴリ一覧 */

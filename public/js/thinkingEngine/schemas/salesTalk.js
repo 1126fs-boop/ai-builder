@@ -3,6 +3,7 @@
  */
 
 import { CLIENT_INDUSTRY_OPTIONS } from "../../../context.js";
+import { applyFreeInputQualityBonus } from "./_sharedSchemaFields.js";
 
 export const SALES_TALK_DYNAMIC_QUESTIONS = {
   industry: {
@@ -79,7 +80,9 @@ export const SALES_TALK_SCHEMA = {
       reason: "取引先状況があると台本の具体性が上がる",
     },
   ],
-  maxDynamicQuestions: 3,
+  maxDynamicQuestions: 4,
+  minimumQualityScore: 0.6,
+  qualityRequiredFields: ["sales_type", "client_challenge", "industry", "goal"],
   inferDefaults(answers) {
     const type = answers.sales_type || "商談";
     const formatMap = {
@@ -101,13 +104,13 @@ export const SALES_TALK_SCHEMA = {
     };
   },
   estimateQuality(answers, pending) {
-    let s = 0.35;
+    let s = 0.3;
     if (answers.sales_type) s += 0.15;
     if (answers.client_challenge) s += 0.15;
     if (answers.industry) s += 0.15;
     if (answers.goal) s += 0.15;
-    if (answers.client_context?.trim()) s += 0.15;
-    s -= pending * 0.05;
-    return Math.min(1, Math.max(0, Math.round(s * 100) / 100));
+    if (answers.client_context?.trim()) s += 0.12;
+    s -= pending * 0.04;
+    return applyFreeInputQualityBonus(Math.min(1, Math.max(0, Math.round(s * 100) / 100)), answers);
   },
 };

@@ -3,6 +3,7 @@
  */
 
 import { getProductChoiceOptions } from "../../../wamProducts.js";
+import { applyFreeInputQualityBonus } from "./_sharedSchemaFields.js";
 
 export const POP_PROMO_DYNAMIC_QUESTIONS = {
   appeal_point: {
@@ -17,11 +18,20 @@ export const POP_PROMO_DYNAMIC_QUESTIONS = {
     text: "掲示・使用場所は？",
     type: "choice",
     options: ["サロン店内", "クリニック受付", "展示会ブース", "デジタル配信（SNS等）"],
+    qualityImpact: "critical",
+  },
+  catch_direction: {
+    id: "catch_direction",
+    text: "キャッチコピーの方向性",
+    type: "text",
+    placeholder: "例: 数字で効果訴求 / 高級感 / 来店促進",
+    optional: true,
+    hint: "ヘッドラインの精度が上がります",
     qualityImpact: "high",
   },
   size_format: {
     id: "size_format",
-    text: "サイズ・形式（任意）",
+    text: "サイズ・形式",
     type: "choice",
     options: ["A4縦", "A3横", "1:1（SNS）", "9:16（縦長）"],
     optional: true,
@@ -57,22 +67,30 @@ export const POP_PROMO_SCHEMA = {
       questionId: "appeal_point",
       priority: 100,
       when: (a) => !a.appeal_point?.trim(),
-      reason: "訴求軸不明だとコピーが弱い",
+      reason: "訴求軸不明だとコピーが弱くなります",
     },
     {
       questionId: "display_location",
-      priority: 90,
+      priority: 95,
       when: (a) => !a.display_location?.trim(),
-      reason: "掲示場所でレイアウトと文字量が変わる",
+      reason: "掲示場所でレイアウトと文字量が変わります",
+    },
+    {
+      questionId: "catch_direction",
+      priority: 80,
+      when: (a) => !a.catch_direction?.trim(),
+      reason: "キャッチ方向があるとヘッドライン精度が上がります",
     },
     {
       questionId: "size_format",
       priority: 50,
       when: (a) => !a.size_format?.trim(),
-      reason: "サイズ指定があるとデザイン指示が具体化する",
+      reason: "サイズ指定があるとデザイン指示が具体化します",
     },
   ],
-  maxDynamicQuestions: 3,
+  maxDynamicQuestions: 4,
+  minimumQualityScore: 0.65,
+  qualityRequiredFields: ["wam_product", "usage", "appeal_point", "display_location"],
   inferDefaults(answers) {
     const usage = answers.usage || "店内POP";
     const sizeMap = {
@@ -81,7 +99,21 @@ export const POP_PROMO_SCHEMA = {
       SNS投稿画像: "1:1（1080×1080）",
       "セミナー・展示会用": "A3横",
     };
+    const locationMap = {
+      店内POP: "サロン店内",
+      提案資料用ビジュアル: "クリニック受付",
+      SNS投稿画像: "デジタル配信（SNS等）",
+      "セミナー・展示会用": "展示会ブース",
+    };
+    const appealMap = {
+      店内POP: "キャンペーン",
+      提案資料用ビジュアル: "導入メリット",
+      SNS投稿画像: "導入メリット",
+      "セミナー・展示会用": "導入メリット",
+    };
     return {
+      display_location: answers.display_location || locationMap[usage] || "サロン店内",
+      appeal_point: answers.appeal_point || appealMap[usage] || "導入メリット",
       size_format: answers.size_format || sizeMap[usage] || "A4縦",
       style: "高級感・信頼感（ワムブランド準拠）",
       output_format: usage.includes("SNS")
@@ -90,13 +122,14 @@ export const POP_PROMO_SCHEMA = {
     };
   },
   estimateQuality(answers, pending) {
-    let s = 0.35;
+    let s = 0.3;
     if (answers.wam_product) s += 0.2;
     if (answers.usage) s += 0.15;
     if (answers.appeal_point) s += 0.15;
     if (answers.display_location) s += 0.15;
-    if (answers.size_format) s += 0.1;
-    s -= pending * 0.05;
-    return Math.min(1, Math.max(0, Math.round(s * 100) / 100));
+    if (answers.catch_direction?.trim()) s += 0.1;
+    if (answers.size_format) s += 0.05;
+    s -= pending * 0.04;
+    return applyFreeInputQualityBonus(Math.min(1, Math.max(0, Math.round(s * 100) / 100)), answers);
   },
 };

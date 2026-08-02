@@ -54,20 +54,26 @@ const CONSTRAINTS = [
  */
 export function analyzePurpose(categoryId, answers, schema) {
   const useCaseId = schema?.useCaseId ?? categoryId;
+  let result;
 
   switch (categoryId) {
     case "proposal":
-      return analyzeProposalPurpose(answers, useCaseId);
+      result = analyzeProposalPurpose(answers, useCaseId);
+      break;
     case "sns":
-      return analyzeSnsPurpose(answers, useCaseId);
+      result = analyzeSnsPurpose(answers, useCaseId);
+      break;
     case "newsletter":
-      return analyzeNewsletterPurpose(answers, useCaseId);
+      result = analyzeNewsletterPurpose(answers, useCaseId);
+      break;
     case "sales":
-      return analyzeSalesPurpose(answers, useCaseId);
+      result = analyzeSalesPurpose(answers, useCaseId);
+      break;
     case "image":
-      return analyzePopPurpose(answers, useCaseId);
+      result = analyzePopPurpose(answers, useCaseId);
+      break;
     default:
-      return {
+      result = {
         primaryGoal: schema?.label ? `${schema.label}の成果物を作成` : "成果物を作成",
         audience: "美容サロン・クリニック",
         deliverableType: useCaseId,
@@ -76,6 +82,19 @@ export function analyzePurpose(categoryId, answers, schema) {
         constraints: CONSTRAINTS,
       };
   }
+
+  return applyUserFreeInput(result, answers);
+}
+
+/** 自由記述を Purpose に反映 */
+function applyUserFreeInput(purpose, answers) {
+  const free = answers.free_input?.trim();
+  if (!free) return purpose;
+  return {
+    ...purpose,
+    userNotes: free,
+    constraints: [...(purpose.constraints || CONSTRAINTS), `ユーザー自由記述: ${free.slice(0, 400)}`],
+  };
 }
 
 function analyzeProposalPurpose(answers, useCaseId) {

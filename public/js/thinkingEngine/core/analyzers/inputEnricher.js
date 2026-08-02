@@ -10,6 +10,7 @@ import { WAM_BRAND_TONE } from "../knowledge/wamKnowledgeBase.js";
 import { APPEAL_TO_CHALLENGE } from "../knowledge/knowledgeRegistry.js";
 import { getTrendsForCategorySync } from "../knowledge/trendsKnowledgeStore.js";
 import { getLearnedInsightsForAnalysis } from "../knowledge/learningRegistry.js";
+import { inferFieldsFromCorpus } from "./freeInputParser.js";
 
 /** @typedef {{ field: string, value: string, source: string, confidence: number, reason: string }} EnrichmentSource */
 
@@ -42,6 +43,22 @@ export function enrichAnswersFromKnowledge(categoryId, answers, schema) {
   }
 
   applyCategoryEnrichment(categoryId, base, corpus, sources);
+
+  // 自由記述 + 回答全体から不足フィールドを推定
+  const enrichedCorpus = [base.free_input, corpus].filter(Boolean).join(" ");
+  const inferredFromText = inferFieldsFromCorpus(categoryId, enrichedCorpus);
+  for (const [field, value] of Object.entries(inferredFromText)) {
+    if (!base[field]?.trim?.()) {
+      sources.push({
+        field,
+        value,
+        source: "free_input_parse",
+        confidence: 0.72,
+        reason: "自由記述・入力文から推定",
+      });
+      base[field] = value;
+    }
+  }
 
   // スキーマ既定値（aspect / tone 等）
   const schemaDefaults = schema?.inferDefaults?.(base) ?? {};
@@ -198,7 +215,24 @@ function applyCategoryEnrichment(categoryId, base, corpus, sources) {
   }
 
   if (categoryId === "image") {
-    add("target_audience", "来店客（BtoC風）", "category_kb", 0.7, "POP 標準ターゲット");
+    if (base.usage && !base.display_location?.trim()) {
+      const loc = {
+        店内POP: "サロン店内",
+        提案資料用ビジュアル: "クリニック受付",
+        SNS投稿画像: "デジタル配信（SNS等）",
+        "セミナー・展示会用": "展示会ブース",
+      }[base.usage];
+      if (loc) add("display_location", loc, "category_kb", 0.9, "用途から掲示場所を推定");
+    }
+    if (base.usage && !base.appeal_point?.trim()) {
+      const ap = {
+        店内POP: "キャンペーン",
+        提案資料用ビジュアル: "導入メリット",
+        SNS投稿画像: "導入メリット",
+        "セミナー・展示会用": "導入メリット",
+      }[base.usage];
+      if (ap) add("appeal_point", ap, "category_kb", 0.88, "用途から訴求軸を推定");
+    }
     add("tone", toneDefault, "brand_kb", 0.7, "ワムブランドトーン");
   }
 

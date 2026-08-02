@@ -37,6 +37,8 @@
  * @property {Record<string, SchemaQuestion>} dynamicQuestions
  * @property {DynamicRule[]} dynamicRules
  * @property {number} maxDynamicQuestions
+ * @property {number} [minimumQualityScore] — 品質合格ライン（0〜1）
+ * @property {string[]} [qualityRequiredFields] — 品質に必要なフィールドID
  * @property {(answers: Object) => Object} [inferDefaults]
  * @property {(answers: Object, pendingDynamic: number) => number} [estimateQuality]
  */
@@ -48,4 +50,8 @@
  * @property {boolean} canGenerate
  * @property {number} qualityScore
  * @property {string[]} missingCritical
+ * @property {string[]} [missingQualityFields]
+ * @property {number} [requiredFieldCoverage]
+ * @property {number} [minimumQualityScore]
+ * @property {boolean} [qualitySufficient]
  */
