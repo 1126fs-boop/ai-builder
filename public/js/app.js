@@ -4,7 +4,7 @@
 
 import { resetAll } from "./state.js";
 import { DOM, showView } from "./ui.js";
-import { initHomeView, renderHome, handleSearchInput, handleNewAiClick, setLibraryFilter } from "./homeView.js";
+import { initHomeView, renderHome, handleSearchInput, setLibraryFilter } from "./homeView.js";
 import { initQuestionView, startCategory, goNext, goPrev, goHomeFromQuestions } from "./questionView.js";
 import {
   initResultView,
@@ -63,7 +63,6 @@ async function init() {
   }
 
   DOM.searchInput?.addEventListener("input", (e) => handleSearchInput(e.target.value));
-  DOM.btnNewAi?.addEventListener("click", handleNewAiClick);
 
   DOM.filterChips.forEach((chip) => {
     chip.addEventListener("click", () => setLibraryFilter(chip.dataset.filter));

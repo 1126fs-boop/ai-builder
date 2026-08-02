@@ -166,7 +166,3 @@ export function handleSearchInput(value) {
   state.searchQuery = value;
   renderHome();
 }
-
-export function handleNewAiClick() {
-  onStartCategory("sales");
-}

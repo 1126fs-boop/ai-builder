@@ -11,6 +11,15 @@ export function isStaticHtmlPath(path: string): boolean {
   return path.endsWith(".html");
 }
 
+/** ログイン後の遷移先を正規化（`/` は `/index.html`） */
+export function normalizeAppRedirect(path: string | null | undefined): string {
+  const raw = (path ?? "").trim();
+  if (!raw || raw === "/") return "/index.html";
+  if (isStaticHtmlPath(raw)) return raw;
+  if (raw.startsWith("/")) return raw;
+  return "/index.html";
+}
+
 /**
  * アプリ内遷移（静的 HTML は window.location を使用）
  * @param path 遷移先パス

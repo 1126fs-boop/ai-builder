@@ -24,7 +24,8 @@ export async function updateSession(request: NextRequest) {
     if (!isAuthRoute && !isAuthApi && !isPublicApi && !isPublicAsset) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
-      url.searchParams.set("redirect", path);
+      const redirectTarget = path === "/" ? "/index.html" : path;
+      url.searchParams.set("redirect", redirectTarget);
       return NextResponse.redirect(url);
     }
     return NextResponse.next({ request });
@@ -54,7 +55,8 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isAuthRoute && !isAuthApi && !isPublicApi && !isPublicAsset) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("redirect", path);
+    const redirectTarget = path === "/" ? "/index.html" : path;
+    url.searchParams.set("redirect", redirectTarget);
     return NextResponse.redirect(url);
   }
 

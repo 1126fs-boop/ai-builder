@@ -198,6 +198,12 @@ body {
 
 /* ── Sections ── */
 .home-section { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+.home-section--primary {
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.06) 0%, rgba(37, 99, 235, 0) 100%);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+}
 
 .home-section__title {
   font-size: 0.75rem;

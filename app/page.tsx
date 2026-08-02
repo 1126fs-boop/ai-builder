@@ -1,12 +1,6 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 
-export default async function Home() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (user) {
-    redirect("/index.html");
-  }
-  redirect("/login");
+/** ルート `/` は常にメインアプリ（静的 SPA）へ。認証は middleware が担当。 */
+export default function Home() {
+  redirect("/index.html");
 }

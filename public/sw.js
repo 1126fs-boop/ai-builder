@@ -3,7 +3,7 @@
  * 静的アセットをキャッシュし、オフライン閲覧をサポート
  */
 
-const CACHE_NAME = "aibuilder-pwa-v27";
+const CACHE_NAME = "aibuilder-pwa-v28";
 
 const PRECACHE = [
   "/",
@@ -138,9 +138,13 @@ const PRECACHE = [
   "/js/meeting/meetingBridge.js",
 ];
 
-/** JS/CSS はネットワーク優先（古い API クライアントのキャッシュ混入を防ぐ） */
+/** HTML / JS / CSS はネットワーク優先（古い index.html のキャッシュ混入を防ぐ） */
 function isNetworkFirstAsset(url) {
-  return /\.(?:js|css)$/.test(url.pathname);
+  return (
+    url.pathname === "/" ||
+    url.pathname.endsWith(".html") ||
+    /\.(?:js|css)$/.test(url.pathname)
+  );
 }
 
 self.addEventListener("message", (event) => {

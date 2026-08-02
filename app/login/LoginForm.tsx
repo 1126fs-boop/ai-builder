@@ -7,7 +7,7 @@ import { withTimeout } from "@/lib/auth/async-utils";
 import { validateEmail, validatePassword } from "@/lib/auth/validation";
 import { signInWithPassword, getSessionUser } from "@/lib/auth/password-auth";
 import { mapAuthError } from "@/lib/auth/errors";
-import { navigateToAppPath } from "@/lib/navigation";
+import { navigateToAppPath, normalizeAppRedirect } from "@/lib/navigation";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import AuthShell from "./AuthShell";
 import "./auth-form.css";
@@ -17,7 +17,7 @@ const AUTH_TIMEOUT_MS = 12_000;
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/index.html";
+  const redirect = normalizeAppRedirect(searchParams.get("redirect"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
