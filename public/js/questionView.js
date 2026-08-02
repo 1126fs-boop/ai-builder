@@ -43,8 +43,45 @@ const QUESTION_HINTS = {
   appeal_point: "訴求軸でヘッドラインとビジュアルが決まります",
   display_location: "掲示場所で文字サイズとレイアウトが変わります",
   size_format: "サイズ指定があるとデザイン指示が具体化します",
-  free_input: "必ず入れたいキーワード、NGワード、キャンペーン名、参考イメージ、デザイン方向性など。AIの自動補完と併用できます",
+  free_input: "必ず入れたい内容、NGワード、ブランドトーン、デザインイメージ、キャッチコピー、キャンペーン名など。AIの自動補完と併用できます",
 };
+
+function renderQualityStatusPanel(status) {
+  if (!DOM.qualityStatusPanel || !status?.headline) {
+    if (DOM.qualityStatusPanel) DOM.qualityStatusPanel.hidden = true;
+    return;
+  }
+
+  DOM.qualityStatusPanel.hidden = false;
+  DOM.qualityStatusPanel.classList.toggle("quality-status--ready", status.readyToGenerate);
+  DOM.qualityStatusHeadline.textContent = status.headline;
+  DOM.qualityStatusSubline.textContent = status.subline || "";
+
+  if (status.missing?.length > 0 && !status.readyToGenerate) {
+    DOM.qualityStatusMissingWrap.hidden = false;
+    DOM.qualityStatusMissingList.innerHTML = "";
+    status.missing.forEach((item) => {
+      const li = document.createElement("li");
+      li.textContent = item;
+      DOM.qualityStatusMissingList.appendChild(li);
+    });
+  } else {
+    DOM.qualityStatusMissingWrap.hidden = true;
+    DOM.qualityStatusMissingList.innerHTML = "";
+  }
+
+  if (status.nextItem && !status.readyToGenerate) {
+    DOM.qualityStatusNext.hidden = false;
+    DOM.qualityStatusNext.textContent = `次に入力：${status.nextItem}`;
+  } else {
+    DOM.qualityStatusNext.hidden = true;
+    DOM.qualityStatusNext.textContent = "";
+  }
+}
+
+function hideQualityStatusPanel() {
+  if (DOM.qualityStatusPanel) DOM.qualityStatusPanel.hidden = true;
+}
 
 export function initQuestionView(handlers) {
   onComplete = handlers.onComplete;
@@ -96,6 +133,7 @@ export function startCategory(categoryId) {
 
     renderQuestion();
     showView("questions");
+    hideQualityStatusPanel();
   } catch (err) {
     console.error("[questionView] startCategory failed", err);
   }
@@ -152,11 +190,16 @@ export function renderQuestion() {
       ? "自由記述（任意）"
       : `STEP ${index + 1}`;
   DOM.questionText.textContent = question.text;
-  const qualityLabel = state.lastGapQuality?.label || "";
   const reasonHint = question._reason ? `💡 ${question._reason}` : "";
   const baseHint = QUESTION_HINTS[question.id] || question.hint || "";
-  DOM.questionHint.textContent = [qualityLabel, reasonHint, baseHint].filter(Boolean).join("\n");
+  DOM.questionHint.textContent = [reasonHint, baseHint].filter(Boolean).join("\n");
   DOM.questionHint.hidden = !DOM.questionHint.textContent;
+
+  if (state.lastGapQuality?.status) {
+    renderQualityStatusPanel(state.lastGapQuality.status);
+  } else {
+    hideQualityStatusPanel();
+  }
 
   DOM.optionsContainer.innerHTML = "";
   DOM.textInputArea.hidden = true;
@@ -206,6 +249,7 @@ function renderChoiceWithCustom(question, saved) {
 function renderTextInput(question, saved) {
   DOM.textInputArea.hidden = false;
   DOM.textInput.placeholder = question.placeholder || "自由に入力してください";
+  DOM.textInput.rows = question.id === "free_input" ? 8 : 4;
   DOM.textInput.value = saved;
   DOM.textInput.oninput = () => {
     state.answers[question.id] = DOM.textInput.value.trim();
@@ -217,6 +261,7 @@ function renderTextInput(question, saved) {
 function showTextInput(question, value) {
   DOM.textInputArea.hidden = false;
   DOM.textInput.placeholder = question.placeholder || "自由に入力してください";
+  DOM.textInput.rows = question.id === "free_input" ? 8 : 4;
   DOM.textInput.value = value || state.customDraft || "";
   DOM.textInput.oninput = () => {
     state.customDraft = DOM.textInput.value;
@@ -311,14 +356,23 @@ function runQualitySupplementStep() {
     score: result.gap?.qualityScore,
     minimum: result.gap?.minimumQualityScore,
     sufficient: result.gap?.qualitySufficient,
-    missing: result.gap?.missingQualityFields ?? [],
-    label: result.qualityLabel ?? "",
+    missing: result.qualityStatus?.missing ?? result.gap?.missingQualityFields ?? [],
+    status: result.qualityStatus ?? null,
   };
+
+  if (result.qualityStatus) {
+    renderQualityStatusPanel(result.qualityStatus);
+  }
 
   if (result.readyToGenerate) {
     state.wizardQualityPassed = true;
     state.gapAnalysisDone = true;
     state.supplementMode = false;
+    state.answers.__wizardQualityCompleted = true;
+    state.answers.__wizardQuality = {
+      score: result.qualityStatus?.score ?? Math.round((result.gap?.qualityScore ?? 0) * 100),
+      missing: result.qualityStatus?.missing ?? [],
+    };
     return "generate";
   }
 
@@ -363,10 +417,9 @@ export async function goNext() {
     }
     if (step === "blocked") {
       showView("questions");
-      const missing = state.lastGapQuality?.missing?.slice(0, 3).join("、") || "";
-      DOM.questionHint.textContent = missing
-        ? `品質基準に届いていません（不足: ${missing}）。回答を追加するか、前の質問に戻って不足項目を埋めてください。`
-        : "品質基準に届いていません。回答を追加するか、前の質問に戻って不足項目を埋めてください。";
+      if (state.lastGapQuality?.status) {
+        renderQualityStatusPanel(state.lastGapQuality.status);
+      }
       return;
     }
   }

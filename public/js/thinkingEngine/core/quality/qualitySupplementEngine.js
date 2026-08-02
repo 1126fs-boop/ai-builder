@@ -7,6 +7,7 @@
 
 import { runWizardAnalysis } from "../pipeline/analysisPipeline.js";
 import { getSchemaForCategory } from "../../schemas/index.js";
+import { buildQualityStatus } from "./qualityStatusFormatter.js";
 
 /**
  * ウィザード用 — 品質補完の次アクションを決定
@@ -34,6 +35,9 @@ export function runQualitySupplement(categoryId, answers, options = {}) {
     ...(gap.inferredAnswers ?? {}),
   };
 
+  const supplementQuestions = (gap.followUpQuestions ?? []).slice(0, 1);
+  const qualityStatus = buildQualityStatus(gap, categoryId, supplementQuestions);
+
   if (gap.qualitySufficient && gap.canProceedToBlueprint) {
     return {
       readyToGenerate: true,
@@ -41,10 +45,9 @@ export function runQualitySupplement(categoryId, answers, options = {}) {
       gap,
       mergedAnswers,
       enrichment,
+      qualityStatus,
     };
   }
-
-  const supplementQuestions = (gap.followUpQuestions ?? []).slice(0, 1);
 
   return {
     readyToGenerate: supplementQuestions.length === 0 && gap.qualitySufficient,
@@ -52,14 +55,8 @@ export function runQualitySupplement(categoryId, answers, options = {}) {
     gap,
     mergedAnswers,
     enrichment,
-    qualityLabel: formatQualityLabel(gap),
+    qualityStatus,
   };
 }
 
-function formatQualityLabel(gap) {
-  if (!gap) return "";
-  const score = Math.round((gap.qualityScore ?? 0) * 100);
-  const min = Math.round((gap.minimumQualityScore ?? 0.65) * 100);
-  if (gap.qualitySufficient) return `品質 ${score}% — 生成可能`;
-  return `品質 ${score}%（目標 ${min}%）— 不足項目を補完中`;
-}
+export { buildQualityStatus } from "./qualityStatusFormatter.js";

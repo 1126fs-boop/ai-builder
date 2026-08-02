@@ -226,8 +226,9 @@ function renderAdapterActions(item) {
   }
 
   if (DOM.btnGenerateImage) {
-    const canImage = gp && openaiImagesAdapter.canGenerate(gp);
-    DOM.btnGenerateImage.hidden = !canImage;
+    // プレゼン版: 合成プレビューは Coming Soon（中途半端な実装を避ける）
+    DOM.btnGenerateImage.hidden = true;
+    DOM.btnGenerateImage.disabled = true;
   }
 }
 
@@ -253,7 +254,8 @@ function renderImageSection(item) {
   if (DOM.imagePlaceholder) {
     DOM.imagePlaceholder.hidden = false;
     DOM.imagePlaceholder.textContent =
-      "「完成イメージを生成」で、背景＋レイアウト＋公式商品画像の合成プレビューを表示します（ChatGPT と同じ imageDirective を使用）";
+      "完成イメージプレビューは Coming Soon（β版）として準備中です。プロンプトは ChatGPT アプリでそのままご利用ください。";
+    DOM.imagePlaceholder.classList.add("image-result__placeholder--coming-soon");
   }
 }
 

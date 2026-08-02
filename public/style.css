@@ -463,6 +463,86 @@ body {
   color: var(--color-text-secondary);
   margin-bottom: var(--spacing-md);
   line-height: 1.5;
+  white-space: pre-line;
+}
+
+/* Quality Gate — ウィザード内ステータス */
+.quality-status {
+  margin: 0 var(--spacing-md) var(--spacing-md);
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+  border: 1.5px solid #bfdbfe;
+  border-radius: var(--radius-md);
+}
+
+.quality-status__headline {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-accent);
+  margin-bottom: 4px;
+}
+
+.quality-status__subline {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.quality-status__missing-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.quality-status__missing-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.quality-status__missing-list li {
+  font-size: 0.85rem;
+  color: var(--color-warning);
+  padding-left: 12px;
+  position: relative;
+  line-height: 1.45;
+}
+
+.quality-status__missing-list li::before {
+  content: "·";
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+}
+
+.quality-status__next {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  line-height: 1.45;
+}
+
+.quality-status--ready {
+  border-color: #86efac;
+  background: linear-gradient(135deg, #ecfdf5 0%, #f8fafc 100%);
+}
+
+.image-result__badge--beta {
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.image-result__placeholder--coming-soon {
+  color: var(--color-text-secondary);
+  line-height: 1.6;
 }
 
 .options { display: flex; flex-direction: column; gap: 8px; }

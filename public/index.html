@@ -14,7 +14,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=14">
+  <link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 
@@ -127,6 +127,16 @@
         </div>
       </div>
 
+      <div id="quality-status-panel" class="quality-status" hidden aria-live="polite">
+        <p id="quality-status-headline" class="quality-status__headline"></p>
+        <p id="quality-status-subline" class="quality-status__subline"></p>
+        <div id="quality-status-missing-wrap" class="quality-status__missing-wrap" hidden>
+          <p class="quality-status__missing-title">不足している情報</p>
+          <ul id="quality-status-missing-list" class="quality-status__missing-list"></ul>
+        </div>
+        <p id="quality-status-next" class="quality-status__next" hidden></p>
+      </div>
+
       <nav class="question-nav">
         <button id="btn-prev" class="btn btn--secondary" type="button">戻る</button>
         <button id="btn-next" class="btn btn--primary" type="button" disabled>
@@ -192,13 +202,13 @@
         <pre id="prompt-output" class="result-card__prompt"></pre>
       </div>
 
-      <!-- 画像生成（SNS / POP） -->
+      <!-- 画像生成（SNS / POP）— プレゼン版は Coming Soon -->
       <div id="image-result-section" class="image-result" hidden>
         <div class="image-result__header">
           <span class="image-result__label">販促ビジュアル</span>
-          <span class="image-result__badge">公式商品画像 + オリジナルデザイン</span>
+          <span class="image-result__badge image-result__badge--beta">Coming Soon · β版</span>
         </div>
-        <p id="image-placeholder" class="image-result__placeholder">画像生成は ChatGPTアプリで行います。合成プレビューで公式商品の配置イメージも確認できます</p>
+        <p id="image-placeholder" class="image-result__placeholder image-result__placeholder--coming-soon">完成イメージプレビューは β版として準備中です。プロンプト生成と ChatGPT アプリでの画像生成はご利用いただけます。</p>
         <img id="image-preview" class="image-result__preview" alt="生成された販促画像" hidden>
       </div>
 
@@ -230,7 +240,7 @@
 
       <div class="result-actions">
         <button id="btn-chatgpt-handoff" class="btn btn--primary btn--full" type="button" hidden>ChatGPTアプリで開く</button>
-        <button id="btn-generate-image" class="btn btn--secondary btn--full" type="button" hidden>合成プレビュー（公式商品配置）</button>
+        <button id="btn-generate-image" class="btn btn--secondary btn--full" type="button" hidden disabled>完成イメージプレビュー（Coming Soon · β版）</button>
         <button id="btn-download-image" class="btn btn--secondary btn--full" type="button" hidden>プレビューをダウンロード</button>
         <button id="btn-copy" class="btn btn--ghost btn--full" type="button">
           <span id="btn-copy-label">プロンプトをコピー</span>
@@ -245,6 +255,6 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script type="module" src="js/app.js?v=15"></script>
+  <script type="module" src="js/app.js?v=16"></script>
 </body>
 </html>

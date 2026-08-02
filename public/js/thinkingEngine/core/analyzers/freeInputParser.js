@@ -72,7 +72,8 @@ export function parseFreeInputDirectives(freeInput) {
   result.hints = meta.hints;
 
   extractListAfterLabel(raw, /(?:必ず|絶対|必須).*?(?:キーワード|文言|入)[：:]\s*/i, result.mustIncludeKeywords);
-  extractListAfterLabel(raw, /(?:キーワード|必須文言)[：:]\s*/i, result.mustIncludeKeywords);
+  extractListAfterLabel(raw, /(?:必ず入れたい|入れたい内容)[：:]\s*/i, result.mustIncludeKeywords);
+  extractListAfterLabel(raw, /(?:キーワード|必須文言|キャッチコピー)[：:]\s*/i, result.mustIncludeKeywords);
   extractQuotedPhrases(raw, result.mustIncludeKeywords);
 
   extractListAfterLabel(raw, /(?:NG|ng|禁止|使わない)[ワード語句]*[：:]\s*/i, result.ngWords);
@@ -92,6 +93,14 @@ export function parseFreeInputDirectives(freeInput) {
 
   const companyMatch = raw.match(/(?:会社|独自|ブランド)[^。\n]*(?:表現|トーン|言い回し)[：:]\s*([^\n。]+)/i);
   if (companyMatch) result.companyExpression = companyMatch[1].trim();
+
+  const brandMatch = raw.match(/(?:ブランドトーン|トーン)[：:]\s*([^\n。]+)/i);
+  if (brandMatch && !result.companyExpression) result.companyExpression = brandMatch[1].trim();
+
+  const catchMatch = raw.match(/(?:キャッチコピー|キャッチ)[：:]\s*([^\n。]+)/i);
+  if (catchMatch && !result.designDirection) {
+    result.designDirection = catchMatch[1].trim();
+  }
 
   result.mustIncludeKeywords = [...new Set(result.mustIncludeKeywords.map((s) => s.trim()).filter(Boolean))];
   result.ngWords = [...new Set(result.ngWords.map((s) => s.trim()).filter(Boolean))];
@@ -231,6 +240,24 @@ export function isQualityFieldSatisfiedByFreeInput(fieldId, ctx) {
       return Boolean(directives.campaignName) || /目的|案内|告知/.test(directives.raw);
     case "audience":
       return /読者|配信先|オーナー|VIP|見込/.test(directives.raw);
+    case "goal":
+      return /目的|ゴール|達成|商談/.test(directives.raw);
+    case "ai_role":
+      return /AI|役割|専門|コンサル|アドバイザー|コピーライター/.test(directives.raw);
+    case "tone":
+      return Boolean(directives.companyExpression) || /トーン|文体|高級|カジュアル|信頼/.test(directives.raw);
+    case "value":
+      return /価値|メリット|提供|ベネフィット/.test(directives.raw);
+    case "industry":
+      return /サロン|クリニック|美容|エステ|業種/.test(directives.raw);
+    case "client_challenge":
+      return /課題|売上|集客|リピート|人手不足|経営/.test(directives.raw);
+    case "sales_type":
+      return /テレアポ|商談|DM|飛び込み|フォロー|営業/.test(directives.raw);
+    case "proposal_scope":
+      return /提案|初回|既存|見積|PoC/.test(directives.raw);
+    case "product_area":
+      return /商品|機器|メニュー|サービス|ハイパーナイフ/.test(directives.raw);
     default:
       return false;
   }

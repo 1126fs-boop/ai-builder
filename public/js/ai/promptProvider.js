@@ -16,6 +16,7 @@ import { diagnoseQuality } from "../../qualityEngine.js";
 import { buildMeetingPromptPayload, structuredPro } from "./promptEnhancer.js";
 import { wrapPrompt } from "../../context.js";
 import { analyzeForWizard, buildDeliverable, hasSchemaFlow } from "../thinkingEngine/index.js";
+import { buildWizardQualityReport } from "../thinkingEngine/core/quality/qualityStatusFormatter.js";
 
 /** @typedef {"template"|"openai"} PromptProviderId */
 
@@ -56,7 +57,10 @@ export async function generateWizardViaProvider(categoryId, answers, callbacks =
   }
 
   callbacks.onStep?.("プロンプトを生成中…");
-  const quality = diagnoseQuality(categoryId, answers);
+  const quality =
+    hasSchemaFlow(categoryId) && answers.__wizardQualityCompleted
+      ? buildWizardQualityReport(categoryId, answers)
+      : diagnoseQuality(categoryId, answers);
 
   const title = generateTitle(category.label, answers);
   profiler.mark("完了");
