@@ -171,13 +171,17 @@ export function buildImageDirective(productKnowledge, structure, answers, creati
   };
 }
 
-/** synthesis の Prompt Builder 向けヒント */
+/** synthesis の Prompt Builder 向けヒント（AI会議統合含む） */
 export function formatSynthesisHints(synthesis) {
   if (!synthesis) return "";
   const parts = [];
+  if (synthesis.councilSummary) parts.push(synthesis.councilSummary);
   if (synthesis.finalDirection) parts.push(`【設計方向】${synthesis.finalDirection}`);
   if (synthesis.agreedPoints?.length) {
     parts.push("【多視点で合意】\n" + synthesis.agreedPoints.map((p) => `- ${p}`).join("\n"));
+  }
+  if (synthesis.tensions?.length) {
+    parts.push("【議論で出た懸念】\n" + synthesis.tensions.map((t) => `- ${t}`).join("\n"));
   }
   return parts.join("\n\n");
 }

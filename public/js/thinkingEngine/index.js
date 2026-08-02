@@ -208,6 +208,13 @@ export {
   buildAnalysisIntelligence,
   formatAnalysisIntelligenceSummary,
 } from "./core/analyzers/analysisIntelligence.js";
+export {
+  runLensEngine,
+  runLensCouncil,
+  getLensPanelForCategory,
+  CATEGORY_LENS_PANELS,
+  LENS_DEFINITIONS,
+} from "./core/analyzers/lensEngine.js";
 export { buildHandoff, buildImageGenerationHandoff, getAdapter, listAdapters } from "./adapters/registry.js";
 
 // ── 共通ユーティリティ ──

@@ -8,7 +8,7 @@
  */
 export function resolveBlueprintInputs(ctx) {
   const envelope = ctx?.payload ? ctx : { payload: ctx };
-  const { answers, purpose, challenge, knowledge, meta, structure, lensReviews, synthesis } =
+  const { answers, purpose, challenge, knowledge, meta, structure, lensReviews, synthesis, lensCouncil } =
     envelope.payload ?? {};
 
   return {
@@ -20,6 +20,7 @@ export function resolveBlueprintInputs(ctx) {
     creativeBrief: structure?.creativeBrief ?? null,
     lensReviews: lensReviews ?? [],
     synthesis: synthesis ?? {},
+    lensCouncil: lensCouncil ?? null,
     meta: meta ?? {},
     contextId: envelope.id ?? null,
   };

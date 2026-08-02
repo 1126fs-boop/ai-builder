@@ -276,6 +276,9 @@ export function buildAnalysisReflectionBlock(bp) {
   if (bp.synthesis?.finalDirection) {
     parts.push(`【多視点統合 — 設計方向】${bp.synthesis.finalDirection}`);
   }
+  if (bp.synthesis?.councilSummary) {
+    parts.push(bp.synthesis.councilSummary);
+  }
   if (bp.synthesis?.agreedPoints?.length) {
     parts.push(
       "【多視点で合意した点】\n" + bp.synthesis.agreedPoints.map((p) => `- ${p}`).join("\n")

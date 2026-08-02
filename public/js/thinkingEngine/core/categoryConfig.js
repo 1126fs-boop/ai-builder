@@ -5,6 +5,15 @@
  */
 
 export const CATEGORY_LENSES = {
+  proposal: ["management", "roi", "sales", "marketing"],
+  sns: ["sns", "instagram", "beauty", "marketing", "copy", "design"],
+  newsletter: ["marketing", "beauty", "copy", "management"],
+  sales: ["sales", "psychology", "beauty", "management"],
+  image: ["design", "marketing", "beauty", "copy"],
+};
+
+/** @deprecated CATEGORY_LENS_PANELS（lensRegistry.js）を参照。後方互換のため残す */
+export const CATEGORY_LENS_PANELS_LEGACY = {
   proposal: ["beauty_consultant", "top_sales", "executive"],
   sns: ["marketer", "sns_manager", "beauty_consultant"],
   newsletter: ["marketer", "beauty_consultant", "top_sales"],

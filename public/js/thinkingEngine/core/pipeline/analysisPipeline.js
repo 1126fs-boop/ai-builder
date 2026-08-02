@@ -93,8 +93,13 @@ export function runAnalysisPipeline(categoryId, answers, options = {}) {
     ok: Boolean(knowledge.analysisIntelligence),
   });
 
-  const { lensReviews, synthesis } = runLensEngine(categoryId, { purpose, challenge, knowledge });
-  phases.push({ id: "lens", label: "多視点レビュー", ok: lensReviews.length >= 2 });
+  const { lensReviews, synthesis, council } = runLensEngine(categoryId, { purpose, challenge, knowledge });
+  phases.push({
+    id: "lens",
+    label: "AI会議（Lens）",
+    ok: lensReviews.length >= 2,
+    meta: council ? { panel: council.panelLabels, rounds: council.roundCount } : null,
+  });
 
   const structure = planStructure(categoryId, {
     purpose,
@@ -122,6 +127,7 @@ export function runAnalysisPipeline(categoryId, answers, options = {}) {
       structure,
       lensReviews,
       synthesis,
+      council,
     },
   });
 
@@ -129,6 +135,7 @@ export function runAnalysisPipeline(categoryId, answers, options = {}) {
   context.payload.structure = structure;
   context.payload.lensReviews = lensReviews;
   context.payload.synthesis = synthesis;
+  if (council) context.payload.lensCouncil = council;
 
   return {
     context,
