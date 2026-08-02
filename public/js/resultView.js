@@ -26,6 +26,7 @@ import {
 import { yieldToMain } from "./ai/performanceProfiler.js";
 import { withTimeout } from "./asyncUtils.js";
 import { getChatGptHandoffText } from "./thinkingEngine/core/promptPresentation.js";
+import { isImageCreativeHandoff } from "./thinkingEngine/adapters/chatgptAdapter.js";
 import { openaiImagesAdapter } from "./thinkingEngine/adapters/openaiImagesAdapter.js";
 import { generateImageFromPrompt } from "./imageGenerationService.js";
 import { handoffPromptToChatGptApp } from "./chatgptHandoff.js";
@@ -222,7 +223,14 @@ function renderAdapterActions(item) {
 
   if (DOM.btnChatgptHandoff) {
     DOM.btnChatgptHandoff.hidden = !gp;
-    DOM.btnChatgptHandoff.textContent = "ChatGPTアプリで開く";
+    if (gp) {
+      const useCaseId = gp.useCaseId ?? gp.payload?.useCaseId ?? item.category;
+      const isImageCreative =
+        isImageCreativeHandoff(useCaseId) || item.category === "sns" || item.category === "image";
+      DOM.btnChatgptHandoff.textContent = isImageCreative
+        ? "ChatGPTで画像を生成"
+        : "ChatGPTアプリで開く";
+    }
   }
 
   if (DOM.btnGenerateImage) {

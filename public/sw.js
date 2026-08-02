@@ -3,7 +3,7 @@
  * 静的アセットをキャッシュし、オフライン閲覧をサポート
  */
 
-const CACHE_NAME = "aibuilder-pwa-v33";
+const CACHE_NAME = "aibuilder-pwa-v34";
 
 const PRECACHE = [
   "/",
