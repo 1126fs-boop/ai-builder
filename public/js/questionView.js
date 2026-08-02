@@ -86,8 +86,45 @@ function hideQualityStatusPanel() {
 export function initQuestionView(handlers) {
   onComplete = handlers.onComplete;
   onGoHome = handlers.onGoHome;
+  ensureQualityStatusPanel();
 
   document.addEventListener("keydown", handleWizardKeydown);
+}
+
+/** index.html 未更新環境でも品質パネルを表示できるよう DOM を保証 */
+function ensureQualityStatusPanel() {
+  if (document.getElementById("quality-status-panel")) {
+    bindQualityStatusDom();
+    return;
+  }
+  const nav = document.querySelector("#view-questions .question-nav");
+  if (!nav) return;
+
+  const panel = document.createElement("div");
+  panel.id = "quality-status-panel";
+  panel.className = "quality-status";
+  panel.hidden = true;
+  panel.setAttribute("aria-live", "polite");
+  panel.innerHTML = `
+    <p id="quality-status-headline" class="quality-status__headline"></p>
+    <p id="quality-status-subline" class="quality-status__subline"></p>
+    <div id="quality-status-missing-wrap" class="quality-status__missing-wrap" hidden>
+      <p class="quality-status__missing-title">不足している情報</p>
+      <ul id="quality-status-missing-list" class="quality-status__missing-list"></ul>
+    </div>
+    <p id="quality-status-next" class="quality-status__next" hidden></p>
+  `;
+  nav.parentNode?.insertBefore(panel, nav);
+  bindQualityStatusDom();
+}
+
+function bindQualityStatusDom() {
+  DOM.qualityStatusPanel = document.getElementById("quality-status-panel");
+  DOM.qualityStatusHeadline = document.getElementById("quality-status-headline");
+  DOM.qualityStatusSubline = document.getElementById("quality-status-subline");
+  DOM.qualityStatusMissingWrap = document.getElementById("quality-status-missing-wrap");
+  DOM.qualityStatusMissingList = document.getElementById("quality-status-missing-list");
+  DOM.qualityStatusNext = document.getElementById("quality-status-next");
 }
 
 function handleWizardKeydown(e) {
