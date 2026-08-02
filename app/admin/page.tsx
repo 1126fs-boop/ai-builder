@@ -90,7 +90,7 @@ export default function AdminPage() {
           <h1>AI Builder 管理</h1>
         </div>
         <nav className="admin__nav">
-          <Link href="/index.html" className="admin__link">← アプリへ</Link>
+          <a href="/index.html" className="admin__link">← アプリへ</a>
           <button type="button" onClick={handleLogout} className="admin__logout">ログアウト</button>
         </nav>
       </header>

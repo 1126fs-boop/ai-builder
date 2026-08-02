@@ -7,6 +7,7 @@ import { withTimeout } from "@/lib/auth/async-utils";
 import { validateEmail, validatePassword } from "@/lib/auth/validation";
 import { signInWithPassword, getSessionUser } from "@/lib/auth/password-auth";
 import { mapAuthError } from "@/lib/auth/errors";
+import { navigateToAppPath } from "@/lib/navigation";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import AuthShell from "./AuthShell";
 import "./auth-form.css";
@@ -44,8 +45,7 @@ export default function LoginForm() {
         );
 
         if (user) {
-          router.replace(redirect);
-          router.refresh();
+          navigateToAppPath(redirect, router, "replace");
         }
       } catch (err) {
         setError(mapAuthError(err instanceof Error ? err : null));
@@ -85,8 +85,7 @@ export default function LoginForm() {
       return;
     }
 
-    router.push(redirect);
-    router.refresh();
+    navigateToAppPath(redirect, router);
   }
 
   if (checking) {

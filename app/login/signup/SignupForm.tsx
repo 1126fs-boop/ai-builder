@@ -12,6 +12,7 @@ import {
 } from "@/lib/auth/validation";
 import { signUpWithPassword, getSessionUser } from "@/lib/auth/password-auth";
 import { mapAuthError } from "@/lib/auth/errors";
+import { navigateToAppPath } from "@/lib/navigation";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import AuthShell from "../AuthShell";
 import "../auth-form.css";
@@ -52,8 +53,7 @@ export default function SignupForm() {
         );
 
         if (user) {
-          router.replace("/index.html");
-          router.refresh();
+          navigateToAppPath("/index.html", router, "replace");
         }
       } catch (err) {
         setError(mapAuthError(err instanceof Error ? err : null));
@@ -102,8 +102,7 @@ export default function SignupForm() {
       return;
     }
 
-    router.push("/index.html");
-    router.refresh();
+    navigateToAppPath("/index.html", router);
   }
 
   if (checking) {

@@ -58,6 +58,12 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (user && path === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/index.html";
+    return NextResponse.redirect(url);
+  }
+
   if (user && (path === "/login" || path.startsWith("/login/signup"))) {
     const url = request.nextUrl.clone();
     url.pathname = "/index.html";
