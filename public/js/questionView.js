@@ -247,8 +247,15 @@ export async function goNext() {
 
   if (isLast && hasSchemaFlow(state.categoryId) && !state.gapAnalysisDone) {
     const gap = runGapAnalysis(state.categoryId, state.answers);
-    state.inferredAnswers = gap.inferredAnswers;
+    state.inferredAnswers = gap.inferredAnswers ?? {};
     state.gapAnalysisDone = true;
+
+    // KB 補完分を回答に反映（ユーザーには見せず内部で利用）
+    for (const [key, val] of Object.entries(state.inferredAnswers)) {
+      if (val && !state.answers[key]?.trim()) {
+        state.answers[key] = val;
+      }
+    }
 
     if (gap.followUpQuestions.length > 0) {
       state.questionFlow = [...questions, ...gap.followUpQuestions];

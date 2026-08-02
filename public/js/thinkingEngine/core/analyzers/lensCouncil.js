@@ -17,9 +17,11 @@ const ROUND_LABELS = {
  * Multi Agent Lens 議論を実行
  * @param {string} categoryId
  * @param {{ purpose: Object, challenge: Object, knowledge: Object }} input
+ * @param {{ qualityFeedback?: string[], iteration?: number, isRetry?: boolean }} [options]
  */
-export function runLensCouncil(categoryId, input) {
+export function runLensCouncil(categoryId, input, options = {}) {
   const { purpose, challenge, knowledge } = input;
+  const { qualityFeedback = null, iteration = 0, isRetry = false } = options;
   const panel = getLensPanelForCategory(categoryId);
   const rounds = [];
 
@@ -37,7 +39,19 @@ export function runLensCouncil(categoryId, input) {
   );
   rounds.push({ round: 3, ...ROUND_LABELS[3], opinions: round3 });
 
-  const lensReviews = round3.map((op) => toLensReview(op));
+  let lensReviews = round3.map((op) => toLensReview(op));
+
+  // 品質未達時: ルーブリックフィードバックに基づく追加改善ラウンド
+  if (isRetry && qualityFeedback?.length) {
+    const refinementOps = panel.map((lens, i) =>
+      buildQualityRefinementOpinion(lens, input, qualityFeedback[i % qualityFeedback.length])
+    );
+    rounds.push({ round: 4, id: "quality_refine", label: "品質改善ラウンド", opinions: refinementOps });
+    lensReviews = [
+      ...round3.map((op) => toLensReview(op)),
+      ...refinementOps.map((op) => toLensReview(op)),
+    ];
+  }
 
   const synthesis = synthesizeCouncil({
     categoryId,
@@ -47,6 +61,8 @@ export function runLensCouncil(categoryId, input) {
     challenge,
     knowledge,
     lensReviews,
+    qualityFeedback,
+    iteration,
   });
 
   return {
@@ -61,6 +77,8 @@ export function runLensCouncil(categoryId, input) {
         label: r.label,
         opinionCount: r.opinions.length,
       })),
+      qualityIteration: iteration + 1,
+      hadQualityRetry: isRetry,
     },
   };
 }
@@ -121,6 +139,21 @@ function buildRoundOpinion(lens, roundNum, input, context) {
   return buildRoundOpinion(lens, 1, input, null);
 }
 
+/** 品質ルーブリック未達時の改善意見 */
+function buildQualityRefinementOpinion(lens, input, feedbackItem) {
+  const { purpose, challenge } = input;
+  const feedback = feedbackItem || "品質基準を満たす具体性を追加";
+  return {
+    lensId: lens.id,
+    lensLabel: lens.label,
+    round: 4,
+    stance: "quality_refine",
+    insight: `【品質改善】${feedback} → ${lens.focus}の視点で: ${lens.example}`,
+    recommendation: `${challenge.surfaceChallenge || "経営課題"}と${purpose.primaryGoal}を${feedback.replace(/^\[[^\]]+\]\s*/, "")}で強化`,
+    counterpoint: null,
+  };
+}
+
 function buildLensInsight(lens, purpose, challenge, knowledge) {
   const sc = challenge.surfaceChallenge || "経営課題";
   const industry = challenge.industry || "美容サロン";
@@ -175,12 +208,18 @@ function toLensReview(opinion) {
   };
 }
 
-function synthesizeCouncil({ categoryId, panel, rounds, purpose, challenge, knowledge, lensReviews }) {
+function synthesizeCouncil({ categoryId, panel, rounds, purpose, challenge, knowledge, lensReviews, qualityFeedback, iteration }) {
   const agreedPoints = [
     "経営課題起点で訴求する（商品スペックから入らない）",
     `Before/After で${challenge.impact}を示す`,
     purpose.constraints?.[0] || "自然な日本語",
   ];
+
+  if (qualityFeedback?.length) {
+    agreedPoints.push(
+      ...qualityFeedback.slice(0, 3).map((f) => `【品質改善】${f}`)
+    );
+  }
 
   panel.slice(0, 3).forEach((lens) => {
     const review = lensReviews.find((r) => r.lensId === lens.id);
@@ -220,10 +259,13 @@ function synthesizeCouncil({ categoryId, panel, rounds, purpose, challenge, know
     .join(" / ");
 
   const councilSummary = [
-    `【AI会議（${panel.length} Lens × ${rounds.length}ラウンド）】`,
+    `【AI会議（${panel.length} Lens × ${rounds.length}ラウンド${iteration > 0 ? ` / 品質改善${iteration + 1}回目` : ""}）】`,
     `参加: ${panel.map((l) => l.label).join("、")}`,
     `統合: ${finalDirection}`,
-  ].join("\n");
+    qualityFeedback?.length ? `品質改善: ${qualityFeedback.slice(0, 2).join(" / ")}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   return {
     agreedPoints,

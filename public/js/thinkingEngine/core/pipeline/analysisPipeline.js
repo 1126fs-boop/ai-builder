@@ -9,6 +9,7 @@ import { analyzePurpose } from "../analyzers/purposeAnalyzer.js";
 import { analyzeChallenge } from "../analyzers/challengeAnalyzer.js";
 import { analyzeGaps, emptyGapAnalysis } from "../analyzers/gapAnalyzer.js";
 import { runLensEngine } from "../analyzers/lensEngine.js";
+import { enrichAnswersFromKnowledge } from "../analyzers/inputEnricher.js";
 import { planStructure } from "../analyzers/structurePlanner.js";
 import { buildKnowledgeSnapshot } from "../knowledge/knowledgeRegistry.js";
 import { applyKnowledgeToBlueprint } from "../knowledge/knowledgeApplicator.js";
@@ -18,13 +19,20 @@ import { generatePersistableId } from "../types/persistable.js";
 
 export function runWizardAnalysis(categoryId, answers) {
   const schema = getSchemaForCategory(categoryId);
-  if (!schema) return { gap: emptyGapAnalysis(), purpose: null, challenge: null };
+  if (!schema) return { gap: emptyGapAnalysis(), purpose: null, challenge: null, enrichment: null };
 
-  const purpose = analyzePurpose(categoryId, answers, schema);
-  const challenge = analyzeChallenge(categoryId, answers, purpose);
-  const gap = analyzeGaps(categoryId, answers, schema, purpose, challenge);
+  const enrichment = enrichAnswersFromKnowledge(categoryId, answers, schema);
+  const enrichedAnswers = enrichment.answers;
 
-  return { gap, purpose, challenge };
+  const purpose = analyzePurpose(categoryId, enrichedAnswers, schema);
+  const challenge = analyzeChallenge(categoryId, enrichedAnswers, purpose);
+  const gap = analyzeGaps(categoryId, enrichedAnswers, schema, purpose, challenge, {
+    enrichedFields: enrichment.enrichedFields,
+    enrichmentSources: enrichment.enrichmentSources,
+    enrichmentConfidence: enrichment.enrichmentConfidence,
+  });
+
+  return { gap, purpose, challenge, enrichment };
 }
 
 export function runAnalysisPipeline(categoryId, answers, options = {}) {
@@ -37,13 +45,29 @@ export function runAnalysisPipeline(categoryId, answers, options = {}) {
   const phases = [];
   const startedAt = Date.now();
 
-  const purpose = analyzePurpose(categoryId, answers, schema);
+  const enrichment = enrichAnswersFromKnowledge(categoryId, answers, schema);
+  const enrichedAnswers = enrichment.answers;
+  phases.push({
+    id: "enrichment",
+    label: "入力補完（KB+トレンド）",
+    ok: enrichment.enrichedFields.length > 0,
+    meta: {
+      enrichedFields: enrichment.enrichedFields,
+      confidence: enrichment.enrichmentConfidence,
+    },
+  });
+
+  const purpose = analyzePurpose(categoryId, enrichedAnswers, schema);
   phases.push({ id: "purpose", label: "目的分析", ok: true });
 
-  const challenge = analyzeChallenge(categoryId, answers, purpose);
+  const challenge = analyzeChallenge(categoryId, enrichedAnswers, purpose);
   phases.push({ id: "challenge", label: "経営課題分析", ok: true, confidence: challenge.confidence });
 
-  const gap = analyzeGaps(categoryId, answers, schema, purpose, challenge);
+  const gap = analyzeGaps(categoryId, enrichedAnswers, schema, purpose, challenge, {
+    enrichedFields: enrichment.enrichedFields,
+    enrichmentSources: enrichment.enrichmentSources,
+    enrichmentConfidence: enrichment.enrichmentConfidence,
+  });
   phases.push({ id: "gap", label: "不足情報判定", ok: gap.canProceedToBlueprint });
 
   if (!gap.canProceedToBlueprint) {
@@ -54,11 +78,12 @@ export function runAnalysisPipeline(categoryId, answers, options = {}) {
       challenge,
       sessionId,
       canProceed: false,
+      enrichment,
       meta: { phases, startedAt, completedAt: Date.now() },
     };
   }
 
-  const mergedAnswers = { ...gap.inferredAnswers, ...answers, _inferred: gap.inferredAnswers };
+  const mergedAnswers = { ...gap.inferredAnswers, ...enrichedAnswers, _inferred: gap.inferredAnswers, _kbEnrichment: enrichedAnswers._kbEnrichment };
 
   const knowledge = buildKnowledgeSnapshot(categoryId, mergedAnswers, challenge);
   knowledge.appliedKnowledge = applyKnowledgeToBlueprint(categoryId, knowledge, challenge, purpose);
@@ -98,7 +123,21 @@ export function runAnalysisPipeline(categoryId, answers, options = {}) {
     id: "lens",
     label: "AI会議（Lens）",
     ok: lensReviews.length >= 2,
-    meta: council ? { panel: council.panelLabels, rounds: council.roundCount } : null,
+    meta: council
+      ? {
+          panel: council.panelLabels,
+          rounds: council.roundCount,
+          qualityScore: council.qualityGate?.score,
+          qualityPassed: council.qualityPassed,
+          iterations: council.councilIterations,
+        }
+      : null,
+  });
+  phases.push({
+    id: "council_quality",
+    label: "品質判定（ルーブリック）",
+    ok: council?.qualityPassed !== false,
+    meta: council?.qualityHistory ?? null,
   });
 
   const structure = planStructure(categoryId, {
@@ -144,6 +183,7 @@ export function runAnalysisPipeline(categoryId, answers, options = {}) {
     challenge,
     sessionId,
     canProceed: true,
+    enrichment,
     meta: context.payload.meta,
   };
 }

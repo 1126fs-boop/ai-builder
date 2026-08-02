@@ -215,6 +215,17 @@ export {
   CATEGORY_LENS_PANELS,
   LENS_DEFINITIONS,
 } from "./core/analyzers/lensEngine.js";
+export {
+  enrichAnswersFromKnowledge,
+  detectProductFromText,
+  isKbEnrichedField,
+} from "./core/analyzers/inputEnricher.js";
+export {
+  evaluateCouncilQuality,
+  runCouncilQualityLoop,
+  COUNCIL_PASS_THRESHOLD,
+  MAX_COUNCIL_QUALITY_ITERATIONS,
+} from "./core/quality/councilQualityGate.js";
 export { buildHandoff, buildImageGenerationHandoff, getAdapter, listAdapters } from "./adapters/registry.js";
 
 // ── 共通ユーティリティ ──

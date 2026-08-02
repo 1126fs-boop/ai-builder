@@ -3,7 +3,7 @@
  * 静的アセットをキャッシュし、オフライン閲覧をサポート
  */
 
-const CACHE_NAME = "aibuilder-pwa-v25";
+const CACHE_NAME = "aibuilder-pwa-v26";
 
 const PRECACHE = [
   "/",
@@ -81,6 +81,8 @@ const PRECACHE = [
   "/js/thinkingEngine/core/analyzers/lensEngine.js",
   "/js/thinkingEngine/core/analyzers/lensRegistry.js",
   "/js/thinkingEngine/core/analyzers/lensCouncil.js",
+  "/js/thinkingEngine/core/analyzers/inputEnricher.js",
+  "/js/thinkingEngine/core/quality/councilQualityGate.js",
   "/js/thinkingEngine/core/analyzers/structurePlanner.js",
   "/js/thinkingEngine/core/categoryConfig.js",
   "/js/thinkingEngine/core/types/generatedPrompt.js",
