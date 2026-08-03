@@ -3,7 +3,17 @@
  */
 
 import { unwrapBlueprint } from "../core/types/blueprint.js";
-import { buildSystemPrompt, formatSynthesisHints, buildKnowledgePromptBlock, DEFAULT_CONSTRAINTS } from "./_shared.js";
+import {
+  buildSystemPrompt,
+  formatSynthesisHints,
+  buildKnowledgePromptBlock,
+  buildAnalysisReflectionBlock,
+  buildPromptCraftBlock,
+  buildSelfReviewInstructionsBlock,
+  formatQualityRetryHints,
+  DEFAULT_CONSTRAINTS,
+  resolveCategoryFromBlueprint,
+} from "./_shared.js";
 
 export function buildSalesTalkPrompts(blueprint) {
   const bp = unwrapBlueprint(blueprint);
@@ -17,6 +27,7 @@ export function buildSalesTalkPrompts(blueprint) {
     .map((l) => `- ${l.focus}: ${l.insight}`)
     .join("\n");
   const knowledgeBlock = buildKnowledgePromptBlock(bp);
+  const categoryId = resolveCategoryFromBlueprint(bp);
 
   const icebreakBlock = (bp.icebreakers || [bp.opening]).map((s, i) => `${i + 1}. ${s}`).join("\n");
   const deepBlock = (bp.deepDiveQuestions || []).map((q, i) => `${i + 1}. ${q}`).join("\n");
@@ -37,6 +48,13 @@ export function buildSalesTalkPrompts(blueprint) {
 ${bp.salesType}用の営業トーク台本を、美容業界のトップ営業が設計したレベルの品質で作成してください。
 
 ${knowledgeBlock}
+
+${formatQualityRetryHints(bp)}
+
+# thinkingCore 分析結果（戦略設計）
+${buildAnalysisReflectionBlock(bp)}
+
+${buildPromptCraftBlock(categoryId)}
 
 【業種】${bp.industry}
 【課題（表面）】${bp.surfaceChallenge}
@@ -75,7 +93,9 @@ ${lensBlock}
 ${formatSynthesisHints(bp.synthesis)}
 
 # 出力
-そのまま営業現場で使える台本形式（セリフ＋トークポイント）で。`;
+そのまま営業現場で使える台本形式（セリフ＋トークポイント）で。
+
+${buildSelfReviewInstructionsBlock(categoryId)}`;
 
   return {
     systemPrompt,

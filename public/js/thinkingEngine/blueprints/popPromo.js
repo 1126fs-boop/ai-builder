@@ -6,7 +6,7 @@ import {
   runLensReviews,
   evaluateDeliverableQuality,
 } from "./_shared.js";
-import { resolveBlueprintInputs } from "./_context.js";
+import { resolveBlueprintInputs, attachStrategicFields } from "./_context.js";
 import { buildPopEnhancements } from "./categoryEnhancers.js";
 
 /**
@@ -99,5 +99,5 @@ export function buildPopPromoBlueprint(ctx) {
     { id: "size", label: "サイズ", pass: Boolean(size) },
   ]);
 
-  return blueprint;
+  return attachStrategicFields(blueprint, inputs);
 }

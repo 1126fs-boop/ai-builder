@@ -13,6 +13,10 @@ import {
   formatSynthesisHints,
   buildAnalysisReflectionBlock,
   buildKnowledgePromptBlock,
+  buildPromptCraftBlock,
+  buildSelfReviewInstructionsBlock,
+  formatQualityRetryHints,
+  resolveCategoryFromBlueprint,
   DEFAULT_CONSTRAINTS,
 } from "./_shared.js";
 
@@ -46,6 +50,7 @@ export function buildPopPromoPrompts(blueprint) {
   const productBlock = buildProductKnowledgeBlock(product, answers);
   const principlesBlock = brief ? buildCreativeDesignPrinciplesBlock(brief) : "";
   const knowledgeBlock = buildKnowledgePromptBlock(bp);
+  const categoryId = resolveCategoryFromBlueprint(bp);
 
   const headlineBlock = (bp.headlineVariants || [bp.headline]).map((h, i) => `${i + 1}. ${h}`).join("\n");
   const hierarchyBlock = (bp.copyHierarchy || []).map((c) => `- ${c}`).join("\n");
@@ -58,10 +63,14 @@ ${productBlock}
 
 ${knowledgeBlock}
 
+${formatQualityRetryHints(bp)}
+
 ${principlesBlock}
 
-# thinkingCore 分析結果
+# thinkingCore 分析結果（戦略設計）
 ${buildAnalysisReflectionBlock(bp)}
+
+${buildPromptCraftBlock(categoryId)}
 
 【訴求】${bp.appealPoint}
 【掲示場所】${bp.displayLocation}
@@ -92,7 +101,9 @@ ${formatSynthesisHints(bp.synthesis)}
 1. オリジナルデザイン指示（配色・構図・タイポ — HP再現禁止）
 2. ヘッドライン3案
 3. サブコピー
-4. 印刷・掲示時の注意点`;
+4. 印刷・掲示時の注意点
+
+${buildSelfReviewInstructionsBlock(categoryId)}`;
 
   const imagePrompt = brief
     ? buildCreativeScenePrompt(brief)

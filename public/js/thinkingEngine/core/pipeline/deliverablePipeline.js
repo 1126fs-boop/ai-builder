@@ -23,6 +23,7 @@ import {
   enrichBlueprintForRetry,
   MAX_QUALITY_RETRIES,
 } from "../quality/rubricFramework.js";
+import { runSelfReview, refinePromptBundle } from "../quality/selfReviewEvaluator.js";
 import { enrichBlueprintWithKnowledge } from "../knowledge/knowledgeApplicator.js";
 
 export function runDeliverablePipeline(categoryId, answers, options = {}) {
@@ -74,6 +75,12 @@ export function runDeliverablePipeline(categoryId, answers, options = {}) {
     blueprintPayload = enrichBlueprintForRetry(blueprintPayload, qualityGate.improvements);
     retryCount += 1;
   }
+
+  // 出力品質セルフレビュー — プロンプトを検査し、必要なら改善指示を追記
+  let selfReview = runSelfReview(categoryId, blueprintPayload, promptBundle);
+  if (selfReview.needsRefinement) {
+    promptBundle = refinePromptBundle(promptBundle, selfReview, categoryId);
+  }
   const imageDirective =
     promptBundle._imageDirective ??
     (blueprintPayload.productAsset
@@ -109,6 +116,9 @@ export function runDeliverablePipeline(categoryId, answers, options = {}) {
             blueprintScore: qualityGate.blueprintScore,
             promptScore: qualityGate.promptScore,
             retryCount,
+            selfReview: selfReview
+              ? { score: selfReview.score, passed: selfReview.passed, refined: Boolean(promptBundle._selfReviewApplied) }
+              : null,
           }
         : null,
     },

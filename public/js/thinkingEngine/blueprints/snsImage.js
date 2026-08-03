@@ -7,7 +7,7 @@ import {
   evaluateDeliverableQuality,
 } from "./_shared.js";
 import { buildCopyPatterns } from "../core/knowledge/wamKnowledgeBase.js";
-import { resolveBlueprintInputs } from "./_context.js";
+import { resolveBlueprintInputs, attachStrategicFields } from "./_context.js";
 
 /**
  * @param {Object} ctx AnalysisContext エンベロープ
@@ -103,5 +103,5 @@ export function buildSnsImageBlueprint(ctx) {
     { id: "cta", label: "CTA", pass: blueprint.copyPatterns.some((c) => c.includes("CTA") || c.includes("DM")) },
   ]);
 
-  return blueprint;
+  return attachStrategicFields(blueprint, { answers, purpose, challenge, knowledge, structure, lensReviews, synthesis });
 }

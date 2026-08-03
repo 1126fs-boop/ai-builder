@@ -13,6 +13,10 @@ import {
   formatSynthesisHints,
   buildAnalysisReflectionBlock,
   buildKnowledgePromptBlock,
+  buildPromptCraftBlock,
+  buildSelfReviewInstructionsBlock,
+  formatQualityRetryHints,
+  resolveCategoryFromBlueprint,
   DEFAULT_CONSTRAINTS,
 } from "./_shared.js";
 
@@ -45,6 +49,7 @@ export function buildSnsImagePrompts(blueprint) {
   const productBlock = buildProductKnowledgeBlock(product, answers);
   const creativeBlock = brief ? buildCreativeDesignPrinciplesBlock(brief) : "";
   const knowledgeBlock = buildKnowledgePromptBlock(bp);
+  const categoryId = resolveCategoryFromBlueprint(bp);
 
   const textPrompt = `# 依頼
 ${bp.snsFormat}用の【オリジナル販促クリエイティブ】（キャプション+コピー+デザイン指示）を作成してください。
@@ -54,10 +59,14 @@ ${productBlock}
 
 ${knowledgeBlock}
 
+${formatQualityRetryHints(bp)}
+
 ${creativeBlock}
 
-# thinkingCore 分析結果
+# thinkingCore 分析結果（戦略設計）
 ${buildAnalysisReflectionBlock(bp)}
+
+${buildPromptCraftBlock(categoryId)}
 
 【訴求軸】${bp.appealAxis}
 【ターゲット】${bp.targetAudience}
@@ -86,7 +95,9 @@ ${bp.hashtags}
 1. オリジナルクリエイティブのデザイン指示（配色・構図・タイポ・装飾 — HP再現禁止）
 2. キャッチコピー3案（日本語）
 3. 投稿キャプション全文
-4. CTA（1つ）`;
+4. CTA（1つ）
+
+${buildSelfReviewInstructionsBlock(categoryId)}`;
 
   const imagePrompt = brief
     ? buildCreativeScenePrompt(brief)

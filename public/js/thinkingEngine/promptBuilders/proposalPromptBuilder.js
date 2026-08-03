@@ -7,7 +7,12 @@ import {
   buildSystemPrompt,
   formatSynthesisHints,
   buildKnowledgePromptBlock,
+  buildAnalysisReflectionBlock,
+  buildPromptCraftBlock,
+  buildSelfReviewInstructionsBlock,
+  formatQualityRetryHints,
   DEFAULT_CONSTRAINTS,
+  resolveCategoryFromBlueprint,
 } from "./_shared.js";
 
 /**
@@ -28,6 +33,10 @@ export function buildProposalPrompts(blueprint) {
     .join("\n\n");
   const chaptersBlock = (bp.chapters || []).map((c, i) => `${i + 1}. ${c}`).join("\n");
   const knowledgeBlock = buildKnowledgePromptBlock(bp);
+  const categoryId = resolveCategoryFromBlueprint(bp);
+  const retryBlock = formatQualityRetryHints(bp);
+  const analysisBlock = buildAnalysisReflectionBlock(bp);
+  const craftBlock = buildPromptCraftBlock(categoryId);
 
   const roiBlock = (bp.roiSection || []).map((r) => `- ${r}`).join("\n");
   const implBlock = (bp.implementationPhases || []).map((p) => `- ${p}`).join("\n");
@@ -51,6 +60,13 @@ export function buildProposalPrompts(blueprint) {
 以下の条件で、取引先に提出できる提案書を、美容業界プロが書いたレベルの品質で作成してください。
 
 ${knowledgeBlock}
+
+${retryBlock}
+
+# thinkingCore 分析結果（戦略設計）
+${analysisBlock}
+
+${craftBlock}
 
 【取引先】${bp.industry}
 【提案種別】${bp.proposalScope}
@@ -103,7 +119,9 @@ ${formatSynthesisHints(synthesis)}
 ${bp.tone}
 
 # 出力
-上記${(bp.chapters || []).length}章構成の提案書全文。見出し（##）付き。そのまま取引先提出または社内プレゼンに使える完成度で。`;
+上記${(bp.chapters || []).length}章構成の提案書全文。見出し（##）付き。そのまま取引先提出または社内プレゼンに使える完成度で。
+
+${buildSelfReviewInstructionsBlock(categoryId)}`;
 
   return {
     systemPrompt,
