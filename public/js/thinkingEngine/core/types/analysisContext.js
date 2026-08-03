@@ -12,6 +12,7 @@ import { createPersistableEnvelope, generatePersistableId } from "./persistable.
  * @property {string[]} successCriteria
  * @property {string} tone
  * @property {string[]} constraints
+ * @property {Object} [strategicIntent] Why/What/How 構造化意図
  */
 
 /**

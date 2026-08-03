@@ -3,7 +3,17 @@
  */
 
 import { unwrapBlueprint } from "../core/types/blueprint.js";
-import { buildSystemPrompt, formatSynthesisHints, buildKnowledgePromptBlock, DEFAULT_CONSTRAINTS } from "./_shared.js";
+import {
+  buildSystemPrompt,
+  formatSynthesisHints,
+  buildKnowledgePromptBlock,
+  buildAnalysisReflectionBlock,
+  buildPromptCraftBlock,
+  buildSelfReviewInstructionsBlock,
+  formatQualityRetryHints,
+  DEFAULT_CONSTRAINTS,
+  resolveCategoryFromBlueprint,
+} from "./_shared.js";
 
 export function buildNewsletterPrompts(blueprint) {
   const bp = unwrapBlueprint(blueprint);
@@ -12,6 +22,7 @@ export function buildNewsletterPrompts(blueprint) {
   const subjectBlock = (bp.subjectLines || []).map((s, i) => `${i + 1}. ${s}`).join("\n");
   const structureBlock = (bp.bodyStructure || []).map((s, i) => `${i + 1}. ${s}`).join("\n");
   const knowledgeBlock = buildKnowledgePromptBlock(bp);
+  const categoryId = resolveCategoryFromBlueprint(bp);
 
   const systemPrompt = buildSystemPrompt({
     role: "美容業界BtoB向けメール・LINE配信のプロフェッショナル（教育型コンテンツ設計）",
@@ -34,6 +45,13 @@ ${bp.channel}の配信文を、美容業界プロが書いたレベルの品質�
 売り込み感のない教育型コンテンツとして設計し、自然に商品・サービス提案へ繋げてください。
 
 ${knowledgeBlock}
+
+${formatQualityRetryHints(bp)}
+
+# thinkingCore 分析結果（戦略設計）
+${buildAnalysisReflectionBlock(bp)}
+
+${buildPromptCraftBlock(categoryId)}
 
 ${seasonBlock}
 
@@ -73,7 +91,9 @@ ${bp.channel?.includes("LINE") ? `# LINE版\n${bp.lineVersion || "300字以内"}
 ${formatSynthesisHints(bp.synthesis)}
 
 # 出力
-${(bp.sections || []).join(" / ")} をそのまま配信可能な完成度で。`;
+${(bp.sections || []).join(" / ")} をそのまま配信可能な完成度で。
+
+${buildSelfReviewInstructionsBlock(categoryId)}`;
 
   return {
     systemPrompt,

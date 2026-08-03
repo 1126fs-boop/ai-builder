@@ -5,7 +5,7 @@
  */
 
 import { evaluateProposalBlueprint } from "../rubrics/proposalQuality.js";
-import { resolveBlueprintInputs } from "./_context.js";
+import { resolveBlueprintInputs, attachStrategicFields } from "./_context.js";
 import { buildProposalEnhancements } from "./categoryEnhancers.js";
 
 function runLensReviews(inputs, blueprint) {
@@ -119,5 +119,5 @@ export function buildProposalBlueprint(ctx) {
 
   blueprint.quality = evaluateProposalBlueprint(blueprint);
 
-  return blueprint;
+  return attachStrategicFields(blueprint, inputs);
 }

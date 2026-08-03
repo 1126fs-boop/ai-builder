@@ -210,3 +210,53 @@ export { buildCreativeScenePrompt, buildCreativeDesignPrinciplesBlock };
 
 /** デフォルト営業制約 */
 export const DEFAULT_CONSTRAINTS = [...BASE_RULES];
+
+/** LLM向け — プロンプト品質ルール（曖昧さ排除・再現性） */
+export function buildPromptCraftBlock(categoryId) {
+  const categoryNotes = {
+    proposal: "章立て・ROI・Before/After・CTAを欠かさない",
+    sns: "3秒フック・保存/シェア意識・1CTA",
+    newsletter: "件名5案・教育型→ソフトセル・PS",
+    sales: "SPIN・深掘り・反論4パターン・クロージング1つ",
+    image: "ヘッドライン3秒・コピー階層・掲示場所適合",
+  };
+  return `# プロンプト品質ルール（厳守）
+- 曖昧語（「適宜」「など」「よしなに」「なんとなく」）を使わない
+- 数値・期間・KPIは不明なら【】プレースホルダーで明示
+- 1成果物1CTA — 複数CTA禁止
+- 美容BtoB（サロン・クリニック）の文脈を維持
+- 商品スペック押し売り禁止 — 経営課題解決を最優先
+- 自然な日本語（AIっぽい表現禁止）
+- ${categoryNotes[categoryId] ?? "営業現場でそのまま使える完成度"}
+- 出力はコピペして即使用できる完成度`;
+}
+
+/** 生成AI向け — 出力前セルフレビュー指示 */
+export function buildSelfReviewInstructionsBlock(categoryId) {
+  const categoryChecks = {
+    proposal: "ROI・3層分析・競合差別化（経営課題切り口）",
+    sns: "3秒フック・保存率意識・公式HP再現なし",
+    newsletter: "開封率・教育型・押し売り感なし",
+    sales: "商品説明から入っていない・反論処理",
+    image: "3秒ヘッドライン・コピー階層",
+  };
+  return `# 出力前セルフレビュー（必須 — 修正してから最終出力）
+生成した内容を出力する前に、以下を自己チェックし、問題があれば修正してください:
+1. 曖昧な表現（「適宜」「など」）が残っていないか
+2. 目的が明確で、${categoryChecks[categoryId] ?? "カテゴリ要件"}を満たしているか
+3. 美容業界BtoBとして違和感のある表現がないか
+4. CTAが1つに絞られているか
+5. 改善できる点があれば修正してから最終版を出力`;
+}
+
+/** Blueprint の品質改善ヒントをプロンプトへ反映 */
+export function formatQualityRetryHints(blueprint) {
+  const hints = blueprint?.qualityRetryHints ?? [];
+  if (!hints.length && !blueprint?.notes?.includes("品質改善")) return "";
+  const lines = ["# 品質改善ヒント（前回レビュー反映）"];
+  if (hints.length) hints.forEach((h) => lines.push(`- ${h}`));
+  if (blueprint?.notes?.includes("品質改善")) {
+    lines.push(blueprint.notes.split("【品質改善】")[1]?.trim() ?? "");
+  }
+  return lines.filter(Boolean).join("\n");
+}

@@ -5,7 +5,7 @@
  */
 
 import { getSchemaForCategory } from "../../schemas/index.js";
-import { analyzePurpose } from "../analyzers/purposeAnalyzer.js";
+import { analyzePurpose, enrichPurposeWithStrategicIntent } from "../analyzers/purposeAnalyzer.js";
 import { analyzeChallenge } from "../analyzers/challengeAnalyzer.js";
 import { analyzeGaps, emptyGapAnalysis } from "../analyzers/gapAnalyzer.js";
 import { runLensEngine } from "../analyzers/lensEngine.js";
@@ -58,10 +58,11 @@ export function runAnalysisPipeline(categoryId, answers, options = {}) {
     },
   });
 
-  const purpose = analyzePurpose(categoryId, enrichedAnswers, schema);
+  let purpose = analyzePurpose(categoryId, enrichedAnswers, schema);
   phases.push({ id: "purpose", label: "目的分析", ok: true });
 
   const challenge = analyzeChallenge(categoryId, enrichedAnswers, purpose);
+  purpose = enrichPurposeWithStrategicIntent(categoryId, enrichedAnswers, challenge, purpose);
   phases.push({ id: "challenge", label: "経営課題分析", ok: true, confidence: challenge.confidence });
 
   const gap = analyzeGaps(categoryId, enrichedAnswers, schema, purpose, challenge, {

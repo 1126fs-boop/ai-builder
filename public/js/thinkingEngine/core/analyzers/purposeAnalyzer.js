@@ -1,4 +1,5 @@
 import { parseFreeInputDirectives } from "./freeInputParser.js";
+import { buildStrategicIntent } from "./strategicIntentAnalyzer.js";
 
 /** カテゴリ別の成功基準テンプレート */
 const SUCCESS_CRITERIA = {
@@ -82,6 +83,20 @@ export function analyzePurpose(categoryId, answers, schema) {
   }
 
   return applyUserFreeInput(result, answers);
+}
+
+/**
+ * purpose に strategicIntent を付与（challenge 分析後に呼ぶ）
+ * @param {string} categoryId
+ * @param {Object} answers
+ * @param {import("../types/analysisContext.js").ChallengeAnalysis} challenge
+ * @param {import("../types/analysisContext.js").PurposeAnalysis} purpose
+ */
+export function enrichPurposeWithStrategicIntent(categoryId, answers, challenge, purpose) {
+  return {
+    ...purpose,
+    strategicIntent: buildStrategicIntent(categoryId, answers, challenge, purpose),
+  };
 }
 
 /** 自由記述を Purpose に反映（ユーザー指定 + AI推定の両立） */

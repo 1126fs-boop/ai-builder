@@ -265,6 +265,30 @@ export function buildAnalysisReflectionBlock(bp) {
   if (bp.purpose?.primaryGoal) {
     parts.push(`【目的分析】${bp.purpose.primaryGoal}`);
   }
+  const intent = bp.strategicIntent ?? bp.purpose?.strategicIntent;
+  if (intent?.primaryLabel) {
+    parts.push(
+      `【戦略的意図 — ${intent.primaryLabel}】`,
+      `- なぜ（Why）: ${intent.why}`,
+      `- 何を（What）: ${intent.what}`,
+      `- どう（How）: ${intent.how}`,
+      `- 読者が得たいこと: ${intent.audienceJob}`
+    );
+  }
+  if (bp.strategicBlueprint?.winStrategy) {
+    parts.push(`【勝ち筋】${bp.strategicBlueprint.winStrategy}`);
+    if (bp.strategicBlueprint.appealPriority?.length) {
+      parts.push(`【訴求優先順位】${bp.strategicBlueprint.appealPriority.join(" → ")}`);
+    }
+    if (bp.strategicBlueprint.psychologicalTriggers?.length) {
+      parts.push(
+        "【動かす心理】\n" + bp.strategicBlueprint.psychologicalTriggers.map((t) => `- ${t}`).join("\n")
+      );
+    }
+    if (bp.strategicBlueprint.priorityOrder?.length) {
+      parts.push(`【伝える順番】${bp.strategicBlueprint.priorityOrder.join(" → ")}`);
+    }
+  }
   if (bp.challenge?.surfaceChallenge) {
     parts.push(
       `【経営課題】${bp.challenge.surfaceChallenge} → 期待インパクト: ${bp.challenge.impact || bp.impact || "—"}`

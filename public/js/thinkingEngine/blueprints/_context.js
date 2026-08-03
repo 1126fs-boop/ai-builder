@@ -16,12 +16,24 @@ export function resolveBlueprintInputs(ctx) {
     purpose: purpose ?? {},
     challenge: challenge ?? {},
     knowledge: knowledge ?? {},
-    structure: structure ?? {},
+    structure: structure ?? meta?.structure ?? {},
     creativeBrief: structure?.creativeBrief ?? null,
     lensReviews: lensReviews ?? [],
     synthesis: synthesis ?? {},
     lensCouncil: lensCouncil ?? null,
     meta: meta ?? {},
     contextId: envelope.id ?? null,
+  };
+}
+
+/** Blueprint に戦略設計・意図分析を付与 */
+export function attachStrategicFields(blueprint, inputs) {
+  const { structure, purpose } = inputs;
+  return {
+    ...blueprint,
+    strategicBlueprint: structure?.strategicBlueprint ?? blueprint.strategicBlueprint ?? null,
+    strategicIntent: purpose?.strategicIntent ?? blueprint.strategicIntent ?? null,
+    narrativeArc: blueprint.narrativeArc ?? structure?.narrativeArc ?? null,
+    copyStrategy: blueprint.copyStrategy ?? structure?.copyStrategy ?? null,
   };
 }

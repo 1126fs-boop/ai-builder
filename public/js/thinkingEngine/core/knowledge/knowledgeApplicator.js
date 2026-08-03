@@ -11,6 +11,7 @@ import {
   B2B_SALES,
 } from "./industryKnowledgeBase.js";
 import { getSeasonalContext } from "./categoryPlaybooks.js";
+import { getProInsightsForCategory } from "./proInsightsRegistry.js";
 
 /**
  * カテゴリ別 — Blueprint 設計ヒントを生成
@@ -104,6 +105,7 @@ export function applyKnowledgeToBlueprint(categoryId, knowledgeSnapshot, challen
     directives,
     copyFramework: pickCopyFramework(categoryId),
     successCriteriaBoost: buildSuccessCriteriaBoost(categoryId, challenge, purpose),
+    proInsights: getProInsightsForCategory(categoryId, challenge, purpose),
   };
 }
 
@@ -168,6 +170,11 @@ export function formatAppliedHintsForPrompt(applied) {
   if (applied.successCriteriaBoost?.length) {
     lines.push("【品質基準（KB反映）】");
     applied.successCriteriaBoost.forEach((b) => lines.push(`- ${b}`));
+  }
+
+  if (applied.proInsights?.length) {
+    lines.push("【プロが考えるポイント（KB）】");
+    applied.proInsights.forEach((p) => lines.push(`- ${p}`));
   }
 
   return lines.join("\n");

@@ -20,6 +20,7 @@ export const IMAGE_CATEGORY_KB = {
     店内: "待ち時間に読める詳細可",
     入口: "遠目視認・コントラスト強",
   },
+  metrics: ["視認率", "来店問い合わせ", "QRスキャン", "予約転換"],
 };
 
 export function buildImageCategoryBlock(context = {}) {

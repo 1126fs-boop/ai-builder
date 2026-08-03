@@ -6,7 +6,7 @@ import {
   runLensReviews,
   evaluateDeliverableQuality,
 } from "./_shared.js";
-import { resolveBlueprintInputs } from "./_context.js";
+import { resolveBlueprintInputs, attachStrategicFields } from "./_context.js";
 import { buildSalesEnhancements } from "./categoryEnhancers.js";
 
 /**
@@ -73,5 +73,5 @@ export function buildSalesTalkBlueprint(ctx) {
     { id: "closing", label: "クロージング", pass: Boolean(blueprint.closing) },
   ]);
 
-  return blueprint;
+  return attachStrategicFields(blueprint, inputs);
 }
