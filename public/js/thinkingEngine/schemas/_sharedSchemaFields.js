@@ -67,7 +67,7 @@ export function computeRequiredFieldCoverage(merged, requiredFields = [], isFill
 }
 
 /**
- * 品質判定 — 単一の真実
+ * 品質判定 — 生成可能か（満点必須ではない）
  * @param {Object} params
  */
 export function evaluateQualitySufficiency({
@@ -75,10 +75,11 @@ export function evaluateQualitySufficiency({
   minimumQualityScore,
   requiredCoverage,
   missingQualityFields,
+  highQuality = false,
 }) {
   const sufficient =
     qualityScore >= minimumQualityScore &&
-    requiredCoverage >= 0.75 &&
-    missingQualityFields.length === 0;
+    requiredCoverage >= 0.5 &&
+    (missingQualityFields.length === 0 || highQuality);
   return { sufficient };
 }

@@ -14,7 +14,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=15">
+  <link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
 
@@ -130,6 +130,18 @@
       <div id="quality-status-panel" class="quality-status" hidden aria-live="polite">
         <p id="quality-status-headline" class="quality-status__headline"></p>
         <p id="quality-status-subline" class="quality-status__subline"></p>
+        <div id="quality-status-dimensions-wrap" class="quality-status__section" hidden>
+          <p class="quality-status__section-title">品質の内訳</p>
+          <ul id="quality-status-dimensions" class="quality-status__dim-list"></ul>
+        </div>
+        <div id="quality-status-strengths-wrap" class="quality-status__section" hidden>
+          <p class="quality-status__section-title">このプロンプトの強み</p>
+          <ul id="quality-status-strengths" class="quality-status__strength-list"></ul>
+        </div>
+        <div id="quality-status-improvements-wrap" class="quality-status__section" hidden>
+          <p class="quality-status__section-title">さらに良くできるポイント（任意）</p>
+          <ul id="quality-status-improvements" class="quality-status__improve-list"></ul>
+        </div>
         <div id="quality-status-missing-wrap" class="quality-status__missing-wrap" hidden>
           <p class="quality-status__missing-title">不足している情報</p>
           <ul id="quality-status-missing-list" class="quality-status__missing-list"></ul>
@@ -231,7 +243,7 @@
             <ul id="quality-strengths-list" class="evaluation-card__list evaluation-card__list--good"></ul>
           </div>
           <div class="evaluation-card__col">
-            <p class="evaluation-card__col-title">△ 不足情報</p>
+            <p class="evaluation-card__col-title">＋ さらに良くできるポイント（任意）</p>
             <ul id="quality-missing-list" class="evaluation-card__list evaluation-card__list--warn"></ul>
           </div>
         </div>
@@ -255,6 +267,6 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script type="module" src="js/app.js?v=18"></script>
+  <script type="module" src="js/app.js?v=19"></script>
 </body>
 </html>
