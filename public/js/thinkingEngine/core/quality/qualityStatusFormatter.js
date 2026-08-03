@@ -1,6 +1,6 @@
 /**
  * Quality Gate — ウィザード向け品質ステータス表示
- * 「採点AI」ではなく「次に何を入力すれば完成か」を伝える
+ * 点数は正直な評価。100点は「改善点なし」の場合のみ。
  */
 
 import { getSchemaForCategory } from "../../schemas/index.js";
@@ -50,28 +50,24 @@ export function getShortFieldLabel(fieldId, schema = null) {
 }
 
 /**
- * @param {import("../analyzers/gapAnalyzer.js").ReturnType<typeof import("../analyzers/gapAnalyzer.js").analyzeGaps>|null} gap
+ * @param {Object|null} gap
  * @param {string} categoryId
  * @param {import("../../schemas/types.js").SchemaQuestion[]} [supplementQuestions]
  */
 export function buildQualityStatus(gap, categoryId, supplementQuestions = []) {
   if (!gap) {
-    return {
-      score: 0,
-      headline: "",
-      subline: "",
-      missing: [],
-      missingCount: 0,
-      nextItem: null,
-      readyToGenerate: false,
-      coveredByFreeInput: [],
-    };
+    return emptyStatus();
   }
 
   const schema = getSchemaForCategory(categoryId);
-  const score = Math.round((gap.qualityScore ?? 0) * 100);
-  const fieldIds = gap.missingQualityFieldIds ?? [];
-  const missing = fieldIds.map((id) => getShortFieldLabel(id, schema));
+  const score = gap.overallScore ?? Math.round((gap.qualityScore ?? 0) * 100);
+  const dimensions = gap.qualityDimensions ?? [];
+  const strengths = gap.qualityStrengths ?? [];
+  const improvements = gap.qualityImprovements ?? [];
+  const isPerfect = gap.isPerfectQuality ?? false;
+
+  const missingUserIds = gap.missingUserCriticalIds ?? gap.missingQualityFieldIds ?? [];
+  const missing = missingUserIds.map((id) => getShortFieldLabel(id, schema));
   const missingCount = missing.length;
   const readyToGenerate = Boolean(gap.qualitySufficient && gap.canProceedToBlueprint);
 
@@ -80,24 +76,22 @@ export function buildQualityStatus(gap, categoryId, supplementQuestions = []) {
     ? getShortFieldLabel(nextQuestion.id, schema)
     : missing[0] ?? null;
 
-  let headline;
+  let headline = `現在の品質：${score}点`;
   let subline;
 
-  if (readyToGenerate) {
-    headline = `現在の品質：${score}点`;
-    subline = "生成できます。次へ進んでプロンプトを作成してください。";
+  if (isPerfect) {
+    subline = "十分な品質です。改善点は見当たりません。このまま生成できます。";
+  } else if (readyToGenerate && score >= 88) {
+    subline = "十分な高品質です。下記の改善提案は任意です。このまま生成できます。";
+  } else if (readyToGenerate) {
+    subline = "生成可能な品質です。さらに良くするポイントがあれば参考にしてください。";
   } else if (missingCount === 1) {
-    headline = `現在の品質：${score}点`;
-    subline = "あと1項目入力すると生成できます。";
+    subline = "あと1項目入力すると、より確実に生成できます。";
   } else if (missingCount > 1) {
-    headline = `現在の品質：${score}点`;
-    subline = `あと${missingCount}項目入力すると生成できます。`;
+    subline = `あと${missingCount}項目で品質が大きく向上します。`;
   } else {
-    headline = `現在の品質：${score}点`;
-    subline = "品質基準に届いていません。下記を確認してください。";
+    subline = "品質基準に届いていません。下記をご確認ください。";
   }
-
-  const coveredByFreeInput = [];
 
   return {
     score,
@@ -107,42 +101,63 @@ export function buildQualityStatus(gap, categoryId, supplementQuestions = []) {
     missingCount,
     nextItem,
     readyToGenerate,
-    coveredByFreeInput,
+    isPerfect,
+    dimensions,
+    strengths,
+    improvements,
+    coveredByFreeInput: [],
+  };
+}
+
+function emptyStatus() {
+  return {
+    score: 0,
+    headline: "",
+    subline: "",
+    missing: [],
+    missingCount: 0,
+    nextItem: null,
+    readyToGenerate: false,
+    isPerfect: false,
+    dimensions: [],
+    strengths: [],
+    improvements: [],
+    coveredByFreeInput: [],
   };
 }
 
 /**
- * ウィザード完了後の結果画面用レポート
+ * ウィザード完了後の結果画面用レポート — 点数の水増しなし
  * @param {string} categoryId
  * @param {Object} answers
  */
 export function buildWizardQualityReport(categoryId, answers) {
   const wq = answers.__wizardQuality ?? {};
-  const score = wq.score ?? Math.round((answers._gapQualityScore ?? 0.7) * 100);
-  const missing = wq.missing ?? [];
+  const score = wq.score ?? 70;
+  const dimensions = wq.dimensions ?? defaultDimensions(score);
+  const strengths = wq.strengths ?? [];
+  const improvements = wq.improvements ?? [];
+  const isPerfect = wq.isPerfect ?? false;
+
   const grade =
-    score >= 90 ? "S" : score >= 80 ? "A" : score >= 70 ? "B" : score >= 60 ? "C" : "D";
+    score >= 95 && isPerfect ? "S" : score >= 85 ? "A" : score >= 75 ? "B" : score >= 65 ? "C" : "D";
   const gradeLabels = {
-    S: "最高品質 — そのまま商談で使えます",
-    A: "高品質 — 微調整ですぐ使えます",
+    S: "最高品質 — 改善点なし（満点評価）",
+    A: "高品質 — そのまま商談で使えます",
     B: "良好 — 営業現場で使える品質です",
     C: "標準 — 追加情報で更に向上します",
     D: "要改善 — ウィザードで不足項目を補完してください",
   };
 
-  const strengths = [];
-  if (answers.free_input?.trim()) strengths.push("自由記述の指定を反映");
-  if (answers.client_challenge) strengths.push(`経営課題「${answers.client_challenge}」を起点に設計`);
-  if (answers.wam_product) strengths.push(`商品「${answers.wam_product}」を指定`);
-  if (answers.__wizardQualityCompleted) strengths.push("品質ゲート通過済み");
-
   let recommendation;
-  if (score >= 80) {
-    recommendation = "このプロンプトは ChatGPT / Claude に貼り付けてそのまま使えます。";
-  } else if (missing.length > 0) {
-    recommendation = `ウィザードで「${missing[0]}」を補完すると、さらに精度が上がります。`;
+  if (isPerfect) {
+    recommendation = "品質ゲート上、これ以上の改善点はありません。そのままお使いください。";
+  } else if (score >= 85) {
+    recommendation = "十分な高品質です。改善提案は任意 — 必要に応じて自由記述や追加入力で調整できます。";
+  } else if (improvements.length > 0) {
+    recommendation = `任意の改善: ${improvements[0]}`;
   } else {
-    recommendation = "自由記述に必須キーワードやNGワードを追記すると、出力が安定します。";
+    recommendation = "このプロンプトは ChatGPT / Claude に貼り付けて使用できます。";
   }
 
   return {
@@ -150,17 +165,23 @@ export function buildWizardQualityReport(categoryId, answers) {
     stars: Math.max(1, Math.min(5, Math.round(score / 20))),
     grade,
     gradeLabel: gradeLabels[grade] ?? gradeLabels.B,
-    missing: missing.slice(0, 4),
+    missing: improvements.slice(0, 4),
     strengths: strengths.slice(0, 4),
-    dimensions: [
-      { id: "input", label: "入力の充実度", score, max: 100 },
-      { id: "solution", label: "ソリューション適合度", score: Math.min(100, score + 5), max: 100 },
-      { id: "specificity", label: "具体性", score: Math.min(100, score + (answers.free_input ? 8 : 0)), max: 100 },
-      { id: "usability", label: "営業現場での実用性", score: Math.min(100, score + 3), max: 100 },
-    ],
+    dimensions: dimensions.map((d) => ({ ...d, max: 100 })),
     recommendation,
     recommendedAi: getRecommendedAi(categoryId),
+    isPerfect,
   };
+}
+
+function defaultDimensions(score) {
+  return [
+    { id: "information", label: "情報量", score },
+    { id: "target", label: "ターゲットの明確さ", score },
+    { id: "appeal", label: "訴求力", score },
+    { id: "category_fit", label: "カテゴリ適合性", score },
+    { id: "context", label: "AnalysisContext完成度", score },
+  ];
 }
 
 function getRecommendedAi(categoryId) {

@@ -13,10 +13,14 @@ import {
 import {
   DEFAULT_MINIMUM_QUALITY_SCORE,
   SUPPLEMENT_QUESTIONS_PER_ROUND,
-  applyFreeInputQualityBonus,
   computeRequiredFieldCoverage,
   evaluateQualitySufficiency,
 } from "../../schemas/_sharedSchemaFields.js";
+import {
+  evaluateQualityGate,
+  shouldAskSupplement,
+  canGenerateWithQuality,
+} from "../quality/qualityGateEvaluator.js";
 
 /**
  * @param {import("../../schemas/types.js").UseCaseSchema} schema
@@ -43,18 +47,19 @@ function isFieldFilled(fieldId, ctx) {
 function pickSupplementQuestions(schema, ctx) {
   const {
     merged,
-    missingQualityFieldIds,
+    rawAnswers,
+    missingUserCriticalIds,
     askedQuestionIds,
     enrichmentSources,
-    qualitySufficient,
-    minimumQualityScore,
-    qualityScore,
+    gateResult,
     directives,
   } = ctx;
 
-  if (qualitySufficient) return [];
+  if (!shouldAskSupplement(gateResult, missingUserCriticalIds)) return [];
 
-  // 1. 品質必須フィールドの不足を最優先（1問ずつ）
+  const missingQualityFieldIds = missingUserCriticalIds;
+
+  // 1. 品質必須フィールドの不足を最優先（1問ずつ）— ユーザー未入力のみ
   for (const fieldId of missingQualityFieldIds) {
     if (isFieldFilled(fieldId, ctx)) continue;
     const q = getQuestionForField(schema, fieldId);
@@ -96,7 +101,7 @@ function pickSupplementQuestions(schema, ctx) {
 
     const kbThreshold = q.qualityImpact === "critical" ? 0.88 : 0.72;
     if (isKbEnrichedField(q.id, enrichmentSources, kbThreshold)) continue;
-    if (q.optional && qualityScore >= minimumQualityScore - 0.08) continue;
+    if (q.optional && gateResult.highQuality) continue;
 
     return [{ ...q, _reason: rule.reason, _supplementType: "dynamic" }];
   }
@@ -117,6 +122,7 @@ export function analyzeGaps(categoryId, answers, schema, purpose, challenge, opt
   const enrichmentConfidence = options.enrichmentConfidence ?? 0;
   const askedQuestionIds = new Set(options.askedQuestionIds ?? []);
 
+  const rawAnswers = { ...answers };
   const inferredAnswers = schema.inferDefaults?.(answers) || {};
   const merged = { ...inferredAnswers, ...answers };
 
@@ -124,28 +130,37 @@ export function analyzeGaps(categoryId, answers, schema, purpose, challenge, opt
   const qualityRequiredFields = schema.qualityRequiredFields ?? [];
   const directives = parseFreeInputDirectives(merged.free_input);
 
-  const fieldCtx = { merged, enrichmentSources, directives };
+  const gateResult = evaluateQualityGate({
+    categoryId,
+    merged,
+    rawAnswers,
+    enrichmentSources,
+    schema,
+    purpose,
+    challenge,
+  });
 
-  let baseQuality = schema.estimateQuality?.(merged, 0) ?? 0.5;
-  baseQuality = applyFreeInputQualityBonus(baseQuality, merged, directives);
+  const fieldCtx = { merged, enrichmentSources, directives, rawAnswers };
 
   const isFilled = (fieldId) => isFieldFilled(fieldId, fieldCtx);
   const requiredCoverage = computeRequiredFieldCoverage(merged, qualityRequiredFields, isFilled);
 
   const missingQualityFieldIds = qualityRequiredFields.filter((f) => !isFilled(f));
+  const missingUserCriticalIds = qualityRequiredFields.filter(
+    (f) => !rawAnswers[f]?.trim() && !isQualityFieldSatisfiedByFreeInput(f, { merged, enrichmentSources, directives })
+  );
   const missingQualityFields = missingQualityFieldIds.map(
     (f) => getQuestionForField(schema, f)?.text || f
   );
 
-  const qualityScore = Math.round(
-    Math.min(1, baseQuality * 0.7 + requiredCoverage * 0.3) * 100
-  ) / 100;
+  const qualityScore = gateResult.qualityScore;
 
   const { sufficient: qualitySufficient } = evaluateQualitySufficiency({
     qualityScore,
     minimumQualityScore,
     requiredCoverage,
-    missingQualityFields,
+    missingQualityFields: missingUserCriticalIds.map((f) => getQuestionForField(schema, f)?.text || f),
+    highQuality: gateResult.highQuality,
   });
 
   const missingCritical = schema.seedQuestions
@@ -162,12 +177,11 @@ export function analyzeGaps(categoryId, answers, schema, purpose, challenge, opt
   const followUpQuestions = canGenerate
     ? pickSupplementQuestions(schema, {
         merged,
-        missingQualityFieldIds,
+        rawAnswers,
+        missingUserCriticalIds,
         askedQuestionIds,
         enrichmentSources,
-        qualitySufficient,
-        minimumQualityScore,
-        qualityScore,
+        gateResult,
         directives,
       }).slice(0, SUPPLEMENT_QUESTIONS_PER_ROUND)
     : [];
@@ -175,8 +189,8 @@ export function analyzeGaps(categoryId, answers, schema, purpose, challenge, opt
   const requiredFollowUps = followUpQuestions.filter((q) => !q.optional);
   const canProceedToBlueprint =
     canGenerate &&
-    qualitySufficient &&
-    requiredFollowUps.length === 0;
+    canGenerateWithQuality(gateResult, missingCritical, requiredFollowUps.length > 0) &&
+    qualitySufficient;
 
   return buildGapResult({
     followUpQuestions,
@@ -185,11 +199,13 @@ export function analyzeGaps(categoryId, answers, schema, purpose, challenge, opt
     answers,
     canGenerate,
     qualityScore,
+    gateResult,
     challenge,
     enrichmentConfidence,
     missingCritical,
     missingQualityFields,
     missingQualityFieldIds,
+    missingUserCriticalIds,
     requiredCoverage,
     minimumQualityScore,
     qualitySufficient: canProceedToBlueprint,
@@ -218,11 +234,17 @@ function buildGapResult(ctx) {
     canGenerate: ctx.canGenerate,
     canProceedToBlueprint: ctx.canProceedToBlueprint ?? sufficient,
     qualityScore: ctx.qualityScore,
+    overallScore: ctx.gateResult?.overallScore ?? Math.round(ctx.qualityScore * 100),
+    qualityDimensions: ctx.gateResult?.dimensions ?? [],
+    qualityStrengths: ctx.gateResult?.strengths ?? [],
+    qualityImprovements: ctx.gateResult?.improvements ?? [],
+    isPerfectQuality: ctx.gateResult?.isPerfect ?? false,
     analysisConfidence,
     missingCritical: ctx.missingCritical,
     missingOptional: [],
     missingQualityFields: ctx.missingQualityFields,
     missingQualityFieldIds: ctx.missingQualityFieldIds ?? [],
+    missingUserCriticalIds: ctx.missingUserCriticalIds ?? [],
     requiredFieldCoverage: ctx.requiredCoverage,
     minimumQualityScore: ctx.minimumQualityScore,
     qualitySufficient: sufficient,

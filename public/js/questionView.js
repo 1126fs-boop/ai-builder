@@ -54,29 +54,51 @@ function renderQualityStatusPanel(status) {
 
   DOM.qualityStatusPanel.hidden = false;
   DOM.qualityStatusPanel.classList.toggle("quality-status--ready", status.readyToGenerate);
+  DOM.qualityStatusPanel.classList.toggle("quality-status--perfect", status.isPerfect);
   DOM.qualityStatusHeadline.textContent = status.headline;
   DOM.qualityStatusSubline.textContent = status.subline || "";
 
+  renderQualityList(DOM.qualityStatusDimensions, status.dimensions, (d) => `${d.label} ${d.score}点`);
+  if (DOM.qualityStatusDimensionsWrap) {
+    DOM.qualityStatusDimensionsWrap.hidden = !(status.dimensions?.length > 0);
+  }
+
+  renderQualityList(DOM.qualityStatusStrengths, status.strengths);
+  if (DOM.qualityStatusStrengthsWrap) {
+    DOM.qualityStatusStrengthsWrap.hidden = !(status.strengths?.length > 0);
+  }
+
+  renderQualityList(DOM.qualityStatusImprovements, status.improvements);
+  if (DOM.qualityStatusImprovementsWrap) {
+    DOM.qualityStatusImprovementsWrap.hidden = !(status.improvements?.length > 0);
+  }
+
   if (status.missing?.length > 0 && !status.readyToGenerate) {
     DOM.qualityStatusMissingWrap.hidden = false;
-    DOM.qualityStatusMissingList.innerHTML = "";
-    status.missing.forEach((item) => {
-      const li = document.createElement("li");
-      li.textContent = item;
-      DOM.qualityStatusMissingList.appendChild(li);
-    });
-  } else {
+    renderQualityList(DOM.qualityStatusMissingList, status.missing);
+  } else if (DOM.qualityStatusMissingWrap) {
     DOM.qualityStatusMissingWrap.hidden = true;
-    DOM.qualityStatusMissingList.innerHTML = "";
+    if (DOM.qualityStatusMissingList) DOM.qualityStatusMissingList.innerHTML = "";
   }
 
   if (status.nextItem && !status.readyToGenerate) {
     DOM.qualityStatusNext.hidden = false;
     DOM.qualityStatusNext.textContent = `次に入力：${status.nextItem}`;
-  } else {
+  } else if (DOM.qualityStatusNext) {
     DOM.qualityStatusNext.hidden = true;
     DOM.qualityStatusNext.textContent = "";
   }
+}
+
+function renderQualityList(container, items, format = (s) => s) {
+  if (!container) return;
+  container.innerHTML = "";
+  if (!items?.length) return;
+  items.forEach((item) => {
+    const li = document.createElement("li");
+    li.textContent = typeof item === "string" ? item : format(item);
+    container.appendChild(li);
+  });
 }
 
 function hideQualityStatusPanel() {
@@ -108,6 +130,18 @@ function ensureQualityStatusPanel() {
   panel.innerHTML = `
     <p id="quality-status-headline" class="quality-status__headline"></p>
     <p id="quality-status-subline" class="quality-status__subline"></p>
+    <div id="quality-status-dimensions-wrap" class="quality-status__section" hidden>
+      <p class="quality-status__section-title">品質の内訳</p>
+      <ul id="quality-status-dimensions" class="quality-status__dim-list"></ul>
+    </div>
+    <div id="quality-status-strengths-wrap" class="quality-status__section" hidden>
+      <p class="quality-status__section-title">このプロンプトの強み</p>
+      <ul id="quality-status-strengths" class="quality-status__strength-list"></ul>
+    </div>
+    <div id="quality-status-improvements-wrap" class="quality-status__section" hidden>
+      <p class="quality-status__section-title">さらに良くできるポイント（任意）</p>
+      <ul id="quality-status-improvements" class="quality-status__improve-list"></ul>
+    </div>
     <div id="quality-status-missing-wrap" class="quality-status__missing-wrap" hidden>
       <p class="quality-status__missing-title">不足している情報</p>
       <ul id="quality-status-missing-list" class="quality-status__missing-list"></ul>
@@ -122,6 +156,12 @@ function bindQualityStatusDom() {
   DOM.qualityStatusPanel = document.getElementById("quality-status-panel");
   DOM.qualityStatusHeadline = document.getElementById("quality-status-headline");
   DOM.qualityStatusSubline = document.getElementById("quality-status-subline");
+  DOM.qualityStatusDimensionsWrap = document.getElementById("quality-status-dimensions-wrap");
+  DOM.qualityStatusDimensions = document.getElementById("quality-status-dimensions");
+  DOM.qualityStatusStrengthsWrap = document.getElementById("quality-status-strengths-wrap");
+  DOM.qualityStatusStrengths = document.getElementById("quality-status-strengths");
+  DOM.qualityStatusImprovementsWrap = document.getElementById("quality-status-improvements-wrap");
+  DOM.qualityStatusImprovements = document.getElementById("quality-status-improvements");
   DOM.qualityStatusMissingWrap = document.getElementById("quality-status-missing-wrap");
   DOM.qualityStatusMissingList = document.getElementById("quality-status-missing-list");
   DOM.qualityStatusNext = document.getElementById("quality-status-next");
@@ -407,8 +447,12 @@ function runQualitySupplementStep() {
     state.supplementMode = false;
     state.answers.__wizardQualityCompleted = true;
     state.answers.__wizardQuality = {
-      score: result.qualityStatus?.score ?? Math.round((result.gap?.qualityScore ?? 0) * 100),
+      score: result.qualityStatus?.score ?? result.gap?.overallScore ?? 0,
       missing: result.qualityStatus?.missing ?? [],
+      dimensions: result.qualityStatus?.dimensions ?? result.gap?.qualityDimensions ?? [],
+      strengths: result.qualityStatus?.strengths ?? result.gap?.qualityStrengths ?? [],
+      improvements: result.qualityStatus?.improvements ?? result.gap?.qualityImprovements ?? [],
+      isPerfect: result.qualityStatus?.isPerfect ?? result.gap?.isPerfectQuality ?? false,
     };
     return "generate";
   }
